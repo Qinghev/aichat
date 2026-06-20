@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.tools/
+.gradle/
+.env*
+android/.gradle/
+android/build/
+android/app/build/
+*.apk
+!release/AIChatSandbox-debug.apk
+!docs/AIChatSandbox-debug.apk
+backups/
+.deploy-gh-pages/

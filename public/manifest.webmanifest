@@ -1,0 +1,19 @@
+{
+  "name": "微聊",
+  "short_name": "微聊",
+  "description": "移动聊天",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#07c160",
+  "theme_color": "#07c160",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

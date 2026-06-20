@@ -1,0 +1,9 @@
+{
+    "versionCode":  4,
+    "versionName":  "1.3",
+    "apkUrl":  "https://qinghev.github.io/aichat/AIChatSandbox-debug.apk",
+    "sha256":  "5F2C6D7AC452AE1F5FDD1E653FEA76B7C8BA8C4A741A40AA367BAFA704C459FD",
+    "notes":  "Embed GitHub Pages update channel",
+    "mandatory":  false,
+    "createdAt":  "2026-06-20T05:23:57Z"
+}
