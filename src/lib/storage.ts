@@ -65,6 +65,7 @@ export const loadAppState = (): AppState => {
     if (!state.settings.apiModel) state.settings.apiModel = "grok-4.3";
     if (!state.settings.apiBaseUrl) state.settings.apiBaseUrl = "https://api.x.ai/v1";
     if (!state.settings.globalSkillPrompt) state.settings.globalSkillPrompt = "";
+    if (!state.settings.chatBackgroundUrl) state.settings.chatBackgroundUrl = "";
     if (!state.settings.apiKey) state.settings.providerMode = "local_mock";
     return state;
   } catch {

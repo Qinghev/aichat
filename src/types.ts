@@ -160,6 +160,7 @@ export interface Settings {
   apiBaseUrl: string;
   apiModel: string;
   globalSkillPrompt: string;
+  chatBackgroundUrl: string;
   textBackupEndpoint: string;
   autoTextBackup: boolean;
 }

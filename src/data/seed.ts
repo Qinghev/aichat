@@ -464,6 +464,7 @@ export const makeInitialState = (): AppState => {
       apiBaseUrl: "https://api.x.ai/v1",
       apiModel: "grok-4.3",
       globalSkillPrompt: "",
+      chatBackgroundUrl: "",
       textBackupEndpoint: "",
       autoTextBackup: false
     },

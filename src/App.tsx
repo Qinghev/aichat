@@ -1,5 +1,4 @@
 import {
-  Bell,
   BellOff,
   Bookmark,
   BriefcaseBusiness,
@@ -223,8 +222,8 @@ function AvatarEditor({
           <X size={18} />
         </button>
         <h2>{title}</h2>
-        <div className="avatar-preview" style={url ? { backgroundImage: `url(${url})` } : undefined}>
-          {!url && <Image size={28} />}
+        <div className="avatar-preview">
+          {url ? <img src={url} alt="" /> : <Image size={28} />}
         </div>
         <label className="file-row">
           <Upload size={18} />
@@ -972,6 +971,14 @@ function SettingsPanel({
     setStatus("更新检查已完成。");
   };
 
+  const handleChatBackgroundFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const media = await fileToMediaAsset(file, "chat-background");
+    updateSetting("chatBackgroundUrl", media.url);
+    event.target.value = "";
+  };
+
   return (
     <div className="modal-backdrop">
       <div className="modal-panel settings-panel">
@@ -1055,6 +1062,39 @@ function SettingsPanel({
               rows={5}
             />
           </label>
+        </section>
+
+        <section className="settings-section">
+          <h3>聊天背景</h3>
+          <div className="chat-background-preview">
+            {state.settings.chatBackgroundUrl ? (
+              <img src={state.settings.chatBackgroundUrl} alt="" />
+            ) : (
+              <span>默认背景</span>
+            )}
+          </div>
+          <label className="file-row">
+            <Upload size={18} />
+            从手机相册选择
+            <input type="file" accept="image/*" onChange={handleChatBackgroundFile} />
+          </label>
+          <label>
+            <span>图片地址</span>
+            <input
+              value={state.settings.chatBackgroundUrl}
+              onChange={(event) => updateSetting("chatBackgroundUrl", event.target.value)}
+              placeholder="https://..."
+            />
+          </label>
+          <ImageSearchPanel
+            initialQuery="聊天背景 壁纸"
+            onPick={(asset) => updateSetting("chatBackgroundUrl", asset.url)}
+          />
+          {state.settings.chatBackgroundUrl && (
+            <button type="button" className="secondary-button" onClick={() => updateSetting("chatBackgroundUrl", "")}>
+              使用默认背景
+            </button>
+          )}
         </section>
 
         <section className="settings-section">
@@ -1298,6 +1338,11 @@ function ChatView({
     }, 520);
   };
 
+  const chatBackgroundUrl = state.settings.chatBackgroundUrl.trim();
+  const chatBackgroundStyle = chatBackgroundUrl
+    ? { backgroundImage: `url("${chatBackgroundUrl.replace(/"/g, "%22")}")` }
+    : undefined;
+
   return (
     <section className="chat-view">
       <header className="chat-header">
@@ -1315,7 +1360,11 @@ function ChatView({
         </button>
       </header>
 
-      <div className="message-list" ref={messageListRef}>
+      <div
+        className={`message-list ${chatBackgroundUrl ? "has-custom-background" : ""}`}
+        ref={messageListRef}
+        style={chatBackgroundStyle}
+      >
         {messages.filter((message) => message.senderType !== "system").map((message) => {
           const mine = message.senderType === "user";
           const system = false;
@@ -1415,7 +1464,7 @@ function ChatView({
 
 function BottomTabs({ active, setActive }: { active: TabKey; setActive: (tab: TabKey) => void }) {
   const tabs: Array<{ key: TabKey; label: string; icon: ReactNode }> = [
-    { key: "chats", label: "聊天", icon: <MessageCircle size={22} /> },
+    { key: "chats", label: "微信", icon: <MessageCircle size={22} /> },
     { key: "contacts", label: "通讯录", icon: <UserRound size={22} /> },
     { key: "moments", label: "发现", icon: <Compass size={22} /> },
     { key: "me", label: "我", icon: <CircleUserRound size={22} /> }
@@ -1450,6 +1499,10 @@ export default function App() {
   }, [state]);
 
   useEffect(() => {
+    setActiveTab("chats");
+    setActiveConversationId(null);
+    setActiveProfileCharacterId(null);
+    setIsMomentsOpen(false);
     setState((prev) => ({ ...prev, user: { ...prev.user, lastActiveAt: new Date().toISOString() } }));
     void checkForInternalUpdate();
   }, []);
@@ -1816,7 +1869,7 @@ export default function App() {
             <div className="title-row">
               <h1>
                 {activeTab === "chats"
-                  ? "聊天"
+                  ? "微信"
                   : activeTab === "contacts"
                     ? "通讯录"
                     : activeTab === "moments"
@@ -1825,13 +1878,18 @@ export default function App() {
               </h1>
               <div className="header-actions">
                 {activeTab === "chats" && (
-                  <button className="icon-button" onClick={triggerProactive} title="模拟主动问候">
-                    <Bell size={20} />
+                  <button className="icon-button" title="搜索">
+                    <Search size={20} />
                   </button>
                 )}
-                <button className="icon-button">
+                {activeTab === "chats" && (
+                  <button className="icon-button" onClick={triggerProactive} title="新的聊天">
+                    <Plus size={20} />
+                  </button>
+                )}
+                {activeTab !== "chats" && <button className="icon-button">
                   <MoreHorizontal size={20} />
-                </button>
+                </button>}
               </div>
             </div>
           </header>

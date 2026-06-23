@@ -177,6 +177,12 @@ button {
   background: #17201d;
 }
 
+.own-avatar.avatar-image {
+  background-color: #fff;
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
 .avatar-sm {
   width: 40px;
   height: 40px;
@@ -542,16 +548,53 @@ button {
 }
 
 .avatar-preview {
-  width: 84px;
-  height: 84px;
+  width: min(100%, 260px);
+  height: 220px;
   display: grid;
   place-items: center;
   margin: 4px auto 12px;
-  border-radius: 14px;
+  overflow: hidden;
+  border-radius: 8px;
   background: #eef1ed;
-  background-position: center;
-  background-size: cover;
   color: #7b8580;
+}
+
+.avatar-preview img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+}
+
+.chat-background-preview {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid #d8ded8;
+  border-radius: 8px;
+  background: #ededed;
+  color: #8a918d;
+  font-size: 13px;
+}
+
+.chat-background-preview img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+}
+
+.secondary-button {
+  width: 100%;
+  min-height: 42px;
+  margin-top: 10px;
+  border: 1px solid #d8ded8;
+  border-radius: 8px;
+  background: #fff;
+  color: #53615b;
+  font-weight: 700;
 }
 
 .image-search-panel {
@@ -831,6 +874,12 @@ button {
 .message-list {
   overflow-y: auto;
   padding: 12px 12px 18px;
+}
+
+.message-list.has-custom-background {
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
 }
 
 .message-row {
