@@ -30,7 +30,7 @@ try {
   if ($LASTEXITCODE -ne 0) { throw "npm build failed with exit code $LASTEXITCODE" }
   npx.cmd cap sync android
   if ($LASTEXITCODE -ne 0) { throw "Capacitor sync failed with exit code $LASTEXITCODE" }
-  & $gradleBin -p android assembleDebug --no-daemon --offline
+  & $gradleBin -p android assembleDebug --no-daemon
   if ($LASTEXITCODE -ne 0) { throw "Gradle assembleDebug failed with exit code $LASTEXITCODE" }
 }
 finally {

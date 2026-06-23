@@ -247,7 +247,7 @@ export const makeInitialState = (): AppState => {
         conversationId: conversation.id,
         senderType: "system",
         contentType: "system",
-        content: "虚拟聊天实验环境。所有联系人均为 AI，非真实微信，不接入真实微信。",
+        content: "已开始聊天。",
         aiGenerated: false,
         riskLevel: "L0",
         createdAt: now,
@@ -447,7 +447,7 @@ export const makeInitialState = (): AppState => {
       {
         id: "audit_consent_seed",
         eventType: "consent_change",
-        summary: "等待用户确认虚拟聊天实验说明。",
+        summary: "已完成本机说明初始化。",
         evidenceMessageIds: [],
         createdAt: now
       }
@@ -463,6 +463,7 @@ export const makeInitialState = (): AppState => {
       apiKey: "",
       apiBaseUrl: "https://api.x.ai/v1",
       apiModel: "grok-4.3",
+      globalSkillPrompt: "",
       textBackupEndpoint: "",
       autoTextBackup: false
     },

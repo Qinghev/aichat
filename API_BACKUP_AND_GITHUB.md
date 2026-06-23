@@ -20,23 +20,53 @@ API Key: 你自己的 xAI key
 
 也可以填 OpenAI-compatible 中转地址。只要中转服务兼容 `/chat/completions`，就能用于文字聊天。
 
-## 2. Grok 价格参考
-
-以 xAI 官方文档为准，`grok-4.3` 当前价格：
+模型字段直接填服务商给你的模型 ID。App 会把它原样放进请求体的 `model` 字段，例如：
 
 ```text
-输入：$1.25 / 1M tokens
-输出：$2.50 / 1M tokens
+grok-4.3
+grok-4
+gpt-4.1
+claude-sonnet-4
+deepseek-chat
 ```
 
-Imagine API 图像生成价格：
+Base URL 可以填：
 
 ```text
-图片：$0.02 / image
-视频：$0.05 / sec
+https://中转站域名/v1
 ```
 
-注意：当前应用的聊天接口先接文字聊天；图片发送、朋友圈图片搜索仍走现有图片搜索逻辑。若要让 Grok 真正理解用户发来的图片，需要再接 xAI Responses API 的 image input 格式。
+也可以直接填完整地址：
+
+```text
+https://中转站域名/v1/chat/completions
+```
+
+价格和可用模型以你使用的官方平台或中转站后台为准。当前应用的聊天接口先接文字聊天；图片发送、朋友圈图片搜索仍走现有图片搜索逻辑。若要让 Grok 真正理解用户发来的图片，需要再接对应服务商的图文输入格式。
+
+## 2. 全局 Skill 和角色 Skill
+
+全局 Skill：
+
+```text
+我 -> 设置 -> 模型接口 -> 全局 Skill
+```
+
+适合写所有角色共同遵守的规则，例如回复长度、关系边界、你偏好的分析方式。
+
+角色专属 Skill：
+
+```text
+通讯录 -> 选择角色 -> 详细资料 -> 专属 Skill
+```
+
+适合写单个角色的能力、口吻、关系设定和禁区。
+
+实际请求优先级：
+
+```text
+全局 Skill -> 角色专属 Skill -> 人物资料 -> 长期记忆
+```
 
 ## 3. 国内中转 API 怎么选
 
@@ -65,7 +95,7 @@ powershell -ExecutionPolicy Bypass -File scripts/build-internal-update.ps1 -Vers
 发布到 GitHub Pages：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/deploy-github-pages.ps1
+powershell -ExecutionPolicy Bypass -File scripts/publish-github-pages.ps1
 ```
 
 这个脚本会把 `release` 里的这些文件推到 `gh-pages` 分支根目录：

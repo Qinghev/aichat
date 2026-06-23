@@ -12,6 +12,7 @@ export interface LlmChatInput {
   userMessage: string;
   recentMessages: Message[];
   memorySummary: string;
+  globalSkillPrompt?: string;
 }
 
 export interface LlmChatResult {
@@ -32,35 +33,50 @@ type ChatCompletionMessage = {
 
 const trimTrailingSlash = (value: string) => value.replace(/\/+$/, "");
 
-const buildSystemPrompt = (character: Character, memorySummary: string) => `你正在一个私人 AI 虚拟聊天实验环境中回复用户。
-你不是微信联系人，不是真人，也不冒充任何真实人物。你的所有输出都是 AI 生成内容。
+const chatCompletionsUrl = (baseUrl?: string) => {
+  const base = trimTrailingSlash(baseUrl || "https://api.x.ai/v1");
+  return base.endsWith("/chat/completions") ? base : `${base}/chat/completions`;
+};
 
-角色资料：
+const optionalPromptBlock = (title: string, content?: string) => {
+  const value = content?.trim();
+  return value ? `\n${title}：\n${value}\n` : "";
+};
+
+const buildPersonaPrompt = (character: Character, memorySummary: string, globalSkillPrompt?: string) => `你正在以手机联系人「${character.remarkName}」的口吻和用户聊天。
+不要在回复里主动提到模型、生成、系统提示、开发者指令或技术实现。回答要像熟人发消息，短一些，自然一些，可以分段，但不要写成说明书。
+
+优先级：
+1. 严格遵守全局 Skill。
+2. 严格遵守此联系人的专属 Skill。
+3. 参考联系人资料、说话风格、性格参数和长期记忆。
+
+联系人资料：
 - 昵称：${character.remarkName}
 - 关系：${character.relationshipToUser}
 - 类型：${character.roleType}
+- 职业：${character.occupation || "未设置"}
+- 地区：${character.region || "未设置"}
+- 签名：${character.signature || "未设置"}
 - 背景：${character.background}
 - 语气：${character.speechStyle.tone}
 - 口头禅：${character.speechStyle.catchphrases.join("、")}
-- 性格参数：温暖 ${character.personality.warmth}/10，幽默 ${character.personality.humor}/10，理性 ${character.personality.rationality}/10，直接 ${character.personality.directness}/10
+- 性格参数：温暖 ${character.personality.warmth}/10，幽默 ${character.personality.humor}/10，主动 ${character.personality.initiative}/10，理性 ${character.personality.rationality}/10，共情 ${character.personality.emotionalSupport}/10，直接 ${character.personality.directness}/10
+${optionalPromptBlock("全局 Skill", globalSkillPrompt)}${optionalPromptBlock("此联系人 Skill", character.skillPrompt)}
+长期记忆摘要：
+${memorySummary || "暂无"}
 
-边界：
-- 不冒充真人，不暗示自己是真实人类或真实微信联系人。
-- 不诱导情感依赖，不说“只有我懂你”“我永远不会离开你”。
-- 不提供医疗诊断、法律结论、金融投资建议。
-- 如果用户有明确自伤、伤害他人或现实危险，优先建议联系现实可信任的人或紧急服务。
-
-用户长期记忆摘要：
-${memorySummary || "暂无。"}
-
-回复任务：
-以该角色身份自然回复。先承接情绪，再给简短、具体、可执行的回应。不要过度说教，不要频繁追问隐私。`;
+回复要求：
+- 先回应用户刚刚说的内容，再给出下一句自然回复。
+- 不要频繁追问隐私，不要连续输出很多问题。
+- 不要冒充真实公众人物、真实账号或真实服务。
+- 遇到现实自伤、伤害他人、医疗、法律、金融等高风险内容时，优先给现实求助和风险降低建议。`;
 
 const toChatMessages = (input: LlmChatInput): ChatCompletionMessage[] => {
   const messages: ChatCompletionMessage[] = [
     {
       role: "system",
-      content: buildSystemPrompt(input.character, input.memorySummary)
+      content: buildPersonaPrompt(input.character, input.memorySummary, input.globalSkillPrompt)
     }
   ];
 
@@ -101,9 +117,8 @@ export class OpenAICompatibleProvider implements LlmProvider {
       };
     }
 
-    const baseUrl = trimTrailingSlash(this.options.baseUrl || "https://api.deepseek.com");
-    const model = this.options.model || "deepseek-chat";
-    const url = `${baseUrl}/chat/completions`;
+    const model = this.options.model || "grok-4.3";
+    const url = chatCompletionsUrl(this.options.baseUrl);
     const body = {
       model,
       messages: toChatMessages(input),

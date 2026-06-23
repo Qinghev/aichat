@@ -43,6 +43,7 @@ export interface Character {
   album?: MediaAsset[];
   tags?: string[];
   background: string;
+  skillPrompt?: string;
   personality: Personality;
   speechStyle: {
     sentenceLength: "short" | "medium" | "long";
@@ -158,6 +159,7 @@ export interface Settings {
   apiKey: string;
   apiBaseUrl: string;
   apiModel: string;
+  globalSkillPrompt: string;
   textBackupEndpoint: string;
   autoTextBackup: boolean;
 }

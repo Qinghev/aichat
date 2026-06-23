@@ -34,7 +34,8 @@ const migrateState = (state: AppState): AppState => {
         ...(seedCharacter || {}),
         ...character,
         avatarUrl: character.avatarUrl || seedCharacter?.avatarUrl || "",
-        album: character.album || seedCharacter?.album || []
+        album: character.album || seedCharacter?.album || [],
+        skillPrompt: character.skillPrompt || seedCharacter?.skillPrompt || ""
       };
     }),
     messages: state.messages.map((message) => ({
@@ -63,6 +64,7 @@ export const loadAppState = (): AppState => {
     state.user = { ...state.user, consentAccepted: true };
     if (!state.settings.apiModel) state.settings.apiModel = "grok-4.3";
     if (!state.settings.apiBaseUrl) state.settings.apiBaseUrl = "https://api.x.ai/v1";
+    if (!state.settings.globalSkillPrompt) state.settings.globalSkillPrompt = "";
     if (!state.settings.apiKey) state.settings.providerMode = "local_mock";
     return state;
   } catch {

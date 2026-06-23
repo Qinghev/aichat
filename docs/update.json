@@ -1,9 +1,9 @@
 {
-    "versionCode":  4,
-    "versionName":  "1.3",
+    "versionCode":  5,
+    "versionName":  "1.4",
     "apkUrl":  "https://qinghev.github.io/aichat/AIChatSandbox-debug.apk",
-    "sha256":  "5F2C6D7AC452AE1F5FDD1E653FEA76B7C8BA8C4A741A40AA367BAFA704C459FD",
-    "notes":  "Embed GitHub Pages update channel",
+    "sha256":  "082320AEBDC5085E9E84860BA1456824F22ABA5D05426BD87F478966503A0988",
+    "notes":  "Add relay API model selection and global role skills",
     "mandatory":  false,
-    "createdAt":  "2026-06-20T05:23:57Z"
+    "createdAt":  "2026-06-23T07:41:57Z"
 }

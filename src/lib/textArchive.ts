@@ -24,6 +24,7 @@ export interface TextArchive {
       | "signature"
       | "tags"
       | "background"
+      | "skillPrompt"
       | "personality"
       | "speechStyle"
       | "boundaries"
@@ -32,6 +33,9 @@ export interface TextArchive {
       | "enabled"
     >
   >;
+  settings?: {
+    globalSkillPrompt?: string;
+  };
   conversations: Array<Pick<Conversation, "id" | "characterId" | "title" | "lastMessageAt">>;
   messages: Array<
     Pick<
@@ -64,6 +68,7 @@ export const makeTextArchive = (state: AppState): TextArchive => ({
     signature: character.signature,
     tags: character.tags,
     background: character.background,
+    skillPrompt: character.skillPrompt,
     personality: character.personality,
     speechStyle: character.speechStyle,
     boundaries: character.boundaries,
@@ -71,6 +76,9 @@ export const makeTextArchive = (state: AppState): TextArchive => ({
     momentsPolicy: character.momentsPolicy,
     enabled: character.enabled
   })),
+  settings: {
+    globalSkillPrompt: state.settings.globalSkillPrompt
+  },
   conversations: state.conversations.map((conversation) => ({
     id: conversation.id,
     characterId: conversation.characterId,
@@ -160,6 +168,10 @@ export const mergeTextArchive = (state: AppState, archive: TextArchive): AppStat
 
   return {
     ...state,
+    settings: {
+      ...state.settings,
+      globalSkillPrompt: state.settings.globalSkillPrompt || archive.settings?.globalSkillPrompt || ""
+    },
     characters: Array.from(characterById.values()),
     conversations: Array.from(conversationById.values()),
     messages: [...state.messages, ...incomingMessages].sort(

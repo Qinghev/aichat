@@ -337,6 +337,7 @@ function ContactsTab({
         { id: createId("album"), type: "image", url: `https://picsum.photos/seed/${encodeURIComponent(trimmed)}-3/480/480` }
       ],
       background: `${trimmed} 是用户自定义的联系人。`,
+      skillPrompt: "",
       proactivePolicy: { ...seedCharacters[0].proactivePolicy },
       momentsPolicy: { ...seedCharacters[0].momentsPolicy }
     };
@@ -787,6 +788,15 @@ function CharacterProfilePage({
               rows={4}
             />
           </label>
+          <label className="profile-textarea-row">
+            <span>专属 Skill</span>
+            <textarea
+              value={character.skillPrompt || ""}
+              onChange={(event) => onUpdate({ ...character, skillPrompt: event.target.value })}
+              placeholder="只对这个联系人生效的说话方式、能力和边界"
+              rows={4}
+            />
+          </label>
           <label className="profile-edit-row">
             <span>说话风格</span>
             <input
@@ -1016,9 +1026,27 @@ function SettingsPanel({
           <label>
             <span>模型</span>
             <input
+              list="api-model-options"
               value={state.settings.apiModel}
               onChange={(event) => updateSetting("apiModel", event.target.value)}
-              placeholder="grok-4.3"
+              placeholder="grok-4.3 / 中转站模型 ID"
+            />
+            <datalist id="api-model-options">
+              <option value="grok-4.3" />
+              <option value="grok-4" />
+              <option value="grok-3" />
+              <option value="gpt-4.1" />
+              <option value="claude-sonnet-4" />
+              <option value="deepseek-chat" />
+            </datalist>
+          </label>
+          <label className="settings-textarea-label">
+            <span>全局 Skill</span>
+            <textarea
+              value={state.settings.globalSkillPrompt}
+              onChange={(event) => updateSetting("globalSkillPrompt", event.target.value)}
+              placeholder="所有联系人共同遵守的说话方式、能力和边界"
+              rows={5}
             />
           </label>
         </section>
@@ -1181,14 +1209,16 @@ function ChatView({
         character,
         userMessage: content,
         recentMessages: messages.slice(-12),
-        memorySummary
+        memorySummary,
+        globalSkillPrompt: state.settings.globalSkillPrompt
       })
       .catch(async () => {
         const fallback = await localProvider.chat({
           character,
           userMessage: content,
           recentMessages: messages.slice(-12),
-          memorySummary
+          memorySummary,
+          globalSkillPrompt: state.settings.globalSkillPrompt
         });
         return { ...fallback, modelName: "local-fallback-v1" };
       });
@@ -1579,7 +1609,7 @@ export default function App() {
       conversationId: conversation.id,
       senderType: "system",
       contentType: "system",
-      content: "虚拟聊天实验环境。所有联系人均为 AI，非真实微信，不接入真实微信。",
+      content: "已开始聊天。",
       aiGenerated: false,
       riskLevel: "L0",
       createdAt: new Date().toISOString(),

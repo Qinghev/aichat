@@ -7,6 +7,7 @@
 - Android 侧载 APK
 - 微信风格聊天、通讯录、发现、朋友圈、我
 - AI 角色资料和性格可编辑
+- 全局 Skill 和每个角色专属 Skill
 - 远程 OpenAI-compatible 模型或本地模拟回退
 - 私有 APK 更新检查
 - 只含 AI 形象和文字对话的档案导出、导入、电脑备份
@@ -38,6 +39,24 @@ API Key: 你自己的 key
 ```
 
 API key 保存在手机本地，不会打进 APK。
+
+中转站 API 的模型名直接填服务商给你的模型 ID。App 会把它原样放进请求体的 `model` 字段。Base URL 可以填到 `/v1`，也可以直接填完整的 `/v1/chat/completions` 地址。
+
+## 配置 Skill
+
+全局 Skill：
+
+```text
+我 -> 设置 -> 模型接口 -> 全局 Skill
+```
+
+角色专属 Skill：
+
+```text
+通讯录 -> 选择角色 -> 详细资料 -> 专属 Skill
+```
+
+实际请求时优先级是：全局 Skill -> 角色专属 Skill -> 人物资料和记忆。
 
 ## 构建
 
