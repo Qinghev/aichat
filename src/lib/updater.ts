@@ -24,8 +24,9 @@ export interface UpdateManifest {
 
 const InternalUpdater = registerPlugin<InternalUpdaterPlugin>("InternalUpdater");
 const manifestUrl = import.meta.env.VITE_UPDATE_MANIFEST_URL || "";
-const checkIntervalMs = Number(import.meta.env.VITE_UPDATE_CHECK_INTERVAL_MS || 6 * 60 * 60 * 1000);
+const checkIntervalMs = Number(import.meta.env.VITE_UPDATE_CHECK_INTERVAL_MS || 10 * 60 * 1000);
 const lastCheckKey = "weichat-last-update-check-at";
+const pendingUpdateVersionKey = "weichat-pending-update-version";
 
 const parseManifest = (data: unknown): UpdateManifest => {
   if (typeof data === "string") return JSON.parse(data) as UpdateManifest;
@@ -66,15 +67,17 @@ export const checkForInternalUpdate = async (force = false) => {
   const now = Date.now();
   const lastCheckAt = Number(localStorage.getItem(lastCheckKey) || 0);
   if (!force && now - lastCheckAt < checkIntervalMs) return;
-  localStorage.setItem(lastCheckKey, String(now));
 
   try {
     const [appInfo, manifest] = await Promise.all([InternalUpdater.getInfo(), fetchManifest()]);
+    localStorage.setItem(lastCheckKey, String(now));
     if (manifest.versionCode <= appInfo.versionCode) {
+      localStorage.removeItem(pendingUpdateVersionKey);
       if (force) window.alert("当前已是最新版本。");
       return;
     }
 
+    localStorage.setItem(pendingUpdateVersionKey, String(manifest.versionCode));
     const title = manifest.versionName ? `发现新版本 ${manifest.versionName}` : "发现新版本";
     const notes = manifest.notes ? `\n\n${manifest.notes}` : "";
     const confirmed = manifest.mandatory || window.confirm(`${title}${notes}\n\n是否现在更新？`);

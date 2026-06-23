@@ -966,6 +966,12 @@ function SettingsPanel({
     }
   };
 
+  const checkUpdateNow = async () => {
+    setStatus("正在检查更新...");
+    await checkForInternalUpdate(true);
+    setStatus("更新检查已完成。");
+  };
+
   return (
     <div className="modal-backdrop">
       <div className="modal-panel settings-panel">
@@ -1049,6 +1055,13 @@ function SettingsPanel({
               rows={5}
             />
           </label>
+        </section>
+
+        <section className="settings-section">
+          <h3>版本更新</h3>
+          <button type="button" className="primary-button" onClick={checkUpdateNow}>
+            检查更新
+          </button>
         </section>
 
         <section className="settings-section">
