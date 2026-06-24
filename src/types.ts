@@ -3,6 +3,14 @@ export type RiskLevel = "L0" | "L1" | "L2" | "L3" | "L4";
 export type TabKey = "chats" | "contacts" | "moments" | "me";
 export type AuditMode = "safety_summary" | "full_transcript";
 export type ProviderMode = "local_mock" | "openai_compatible";
+export type SkillId =
+  | "warm_followup"
+  | "logic_canvas"
+  | "memory_callback"
+  | "scene_roleplay"
+  | "image_search"
+  | "red_packet"
+  | "playful_combo";
 
 export interface MediaAsset {
   id: string;
@@ -44,6 +52,7 @@ export interface Character {
   tags?: string[];
   background: string;
   skillPrompt?: string;
+  skillIds?: SkillId[];
   personality: Personality;
   speechStyle: {
     sentenceLength: "short" | "medium" | "long";
@@ -88,9 +97,15 @@ export interface Message {
   conversationId: string;
   senderType: SenderType;
   senderCharacterId?: string;
-  contentType: "text" | "image" | "sticker" | "audio" | "system";
+  contentType: "text" | "image" | "sticker" | "audio" | "red_packet" | "system";
   content: string;
   media?: MediaAsset;
+  redPacket?: {
+    amount: number;
+    blessing: string;
+    status: "sent" | "unopened" | "opened";
+    openedAt?: string;
+  };
   aiGenerated: boolean;
   riskLevel: RiskLevel;
   createdAt: string;
@@ -161,10 +176,19 @@ export interface Settings {
   apiBaseUrl: string;
   apiModel: string;
   globalSkillPrompt: string;
+  globalSkillIds: SkillId[];
   chatBackgroundUrl: string;
   momentsCoverUrl: string;
   textBackupEndpoint: string;
   autoTextBackup: boolean;
+}
+
+export interface Wallet {
+  balance: number;
+  weeklyAllowance: number;
+  lastWeeklyCreditAt: string;
+  totalSent: number;
+  totalReceived: number;
 }
 
 export interface AppState {
@@ -176,6 +200,7 @@ export interface AppState {
   memories: MemoryNote[];
   auditEvents: AuditEvent[];
   settings: Settings;
+  wallet: Wallet;
   counters: {
     todayProactiveCount: number;
     lastProactiveDate: string;

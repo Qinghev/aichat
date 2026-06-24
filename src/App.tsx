@@ -24,7 +24,6 @@ import {
   QrCode,
   RefreshCw,
   Search,
-  Send,
   ShoppingBag,
   SlidersHorizontal,
   Smile,
@@ -63,7 +62,9 @@ import {
 } from "./lib/media";
 import { downloadTextArchive, mergeTextArchive, sendTextArchive, type TextArchive } from "./lib/textArchive";
 import { checkForInternalUpdate } from "./lib/updater";
-import type { AppState, Character, Conversation, MediaAsset, Message, MomentPost, TabKey, UserProfile } from "./types";
+import { formatMoney, normalizeWallet, pickRedPacketAmount } from "./lib/wallet";
+import { hasSkill, mergeSkillIds, skillCombos, skillPresets, toggleSkillId } from "./lib/skills";
+import type { AppState, Character, Conversation, MediaAsset, Message, MomentPost, SkillId, TabKey, UserProfile } from "./types";
 
 const localProvider = new LocalPersonaProvider();
 
@@ -108,6 +109,7 @@ const messagePreview = (message?: Message) => {
   if (!message) return "还没有消息";
   if (message.contentType === "image") return "[图片]";
   if (message.contentType === "sticker") return `[表情] ${message.media?.label || message.content}`;
+  if (message.contentType === "red_packet") return `[红包] ${message.redPacket?.blessing || message.content}`;
   return message.content;
 };
 
@@ -226,6 +228,48 @@ function ActionSheet({
           取消
         </button>
       </div>
+    </div>
+  );
+}
+
+function SkillSelector({
+  value,
+  onChange,
+  compact = false
+}: {
+  value: SkillId[];
+  onChange: (value: SkillId[]) => void;
+  compact?: boolean;
+}) {
+  return (
+    <div className={`skill-selector ${compact ? "compact" : ""}`}>
+      <div className="skill-chip-grid">
+        {skillPresets.map((skill) => {
+          const active = value.includes(skill.id);
+          return (
+            <button
+              type="button"
+              className={active ? "active" : ""}
+              key={skill.id}
+              onClick={() => onChange(toggleSkillId(value, skill.id))}
+              title={skill.description}
+            >
+              <b>{compact ? skill.shortLabel : skill.label}</b>
+              {!compact && <span>{skill.description}</span>}
+            </button>
+          );
+        })}
+      </div>
+      {!compact && (
+        <div className="skill-combo-row">
+          {skillCombos.map((combo) => (
+            <button type="button" key={combo.id} onClick={() => onChange(mergeSkillIds(value, combo.skillIds))}>
+              <span>{combo.label}</span>
+              <small>{combo.description}</small>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -565,6 +609,7 @@ function ContactsTab({
       ],
       background: `${trimmed} 是用户自定义的联系人。`,
       skillPrompt: "",
+      skillIds: ["memory_callback", "playful_combo"],
       proactivePolicy: { ...seedCharacters[0].proactivePolicy },
       momentsPolicy: { ...seedCharacters[0].momentsPolicy }
     };
@@ -1025,6 +1070,14 @@ function CharacterProfilePage({
               rows={4}
             />
           </label>
+          <div className="profile-skill-row">
+            <span>专属 Skills</span>
+            <SkillSelector
+              compact
+              value={character.skillIds || []}
+              onChange={(skillIds) => onUpdate({ ...character, skillIds })}
+            />
+          </div>
           <label className="profile-edit-row">
             <span>说话风格</span>
             <input
@@ -1110,6 +1163,7 @@ function MeTab({
         <button className="setting-row">
           <WeIcon name="services" tone="green" />
           服务
+          <span className="setting-value">钱包 {formatMoney(state.wallet.balance)}</span>
           <ChevronRight size={18} />
         </button>
       </div>
@@ -1255,8 +1309,10 @@ function SettingsPanel({
         settings: {
           ...prev.settings,
           ...backup.settings,
-          apiKey: prev.settings.apiKey
-        }
+          apiKey: prev.settings.apiKey,
+          globalSkillIds: backup.settings?.globalSkillIds || prev.settings.globalSkillIds || []
+        },
+        wallet: normalizeWallet(backup.wallet || prev.wallet)
       }));
       setStatus("已恢复完整本机数据。");
     } catch {
@@ -1364,6 +1420,16 @@ function SettingsPanel({
               <option value="deepseek-chat" />
             </datalist>
           </label>
+          <div className="settings-skill-block">
+            <div className="settings-inline-title">
+              <span>全局 Skills</span>
+              <small>这里的设置会影响所有联系人</small>
+            </div>
+            <SkillSelector
+              value={state.settings.globalSkillIds || []}
+              onChange={(globalSkillIds) => updateSetting("globalSkillIds", globalSkillIds)}
+            />
+          </div>
           <label className="settings-textarea-label">
             <span>全局 Skill</span>
             <textarea
@@ -1538,6 +1604,10 @@ function ChatView({
   const [isThinking, setIsThinking] = useState(false);
   const [showStickers, setShowStickers] = useState(false);
   const [showImagePicker, setShowImagePicker] = useState(false);
+  const [showMoreActions, setShowMoreActions] = useState(false);
+  const [showRedPacketPanel, setShowRedPacketPanel] = useState(false);
+  const [redPacketAmount, setRedPacketAmount] = useState("88");
+  const [redPacketBlessing, setRedPacketBlessing] = useState("恭喜发财，大吉大利");
   const [showChatActions, setShowChatActions] = useState(false);
   const messageListRef = useRef<HTMLDivElement | null>(null);
   const character = state.characters.find((item) => item.id === conversation.characterId)!;
@@ -1556,7 +1626,7 @@ function ChatView({
 
   useEffect(() => {
     scrollToBottom();
-  }, [conversation.id, messages.length, isThinking, showImagePicker, showStickers]);
+  }, [conversation.id, messages.length, isThinking, showImagePicker, showStickers, showMoreActions, showRedPacketPanel]);
 
   const appendMessages = (messagesToAdd: Message[]) => {
     const latest = messagesToAdd[messagesToAdd.length - 1];
@@ -1585,6 +1655,117 @@ function ChatView({
     appendMessages([message]);
     setShowStickers(false);
     setShowImagePicker(false);
+    setShowMoreActions(false);
+    setShowRedPacketPanel(false);
+  };
+
+  const sendRedPacket = (event?: FormEvent) => {
+    event?.preventDefault();
+    const amount = Math.max(0, Math.round(Number(redPacketAmount)));
+    if (!amount || amount > state.wallet.balance) return;
+    const blessing = redPacketBlessing.trim() || "恭喜发财，大吉大利";
+    const now = new Date().toISOString();
+    const message: Message = {
+      id: createId("msg"),
+      conversationId: conversation.id,
+      senderType: "user",
+      contentType: "red_packet",
+      content: blessing,
+      redPacket: {
+        amount,
+        blessing,
+        status: "sent"
+      },
+      aiGenerated: false,
+      riskLevel: "L0",
+      createdAt: now,
+      modelName: "human"
+    };
+
+    setState((prev) => ({
+      ...prev,
+      wallet: {
+        ...prev.wallet,
+        balance: Math.max(0, prev.wallet.balance - amount),
+        totalSent: prev.wallet.totalSent + amount
+      },
+      messages: [...prev.messages, message],
+      conversations: prev.conversations.map((item) =>
+        item.id === conversation.id ? { ...item, lastMessageAt: now, unreadCount: 0 } : item
+      )
+    }));
+    setShowRedPacketPanel(false);
+    setShowMoreActions(false);
+    setRedPacketAmount("88");
+    setRedPacketBlessing("恭喜发财，大吉大利");
+    window.setTimeout(() => {
+      const replyAt = new Date().toISOString();
+      const thanks = [
+        "收到了，今天这份仪式感可以。",
+        "哈哈我收下了，先记你一笔好。",
+        "收到，谢谢老板。",
+        "这个红包我就不客气啦。"
+      ];
+      const reply: Message = {
+        id: createId("msg"),
+        conversationId: conversation.id,
+        senderType: "ai",
+        senderCharacterId: character.id,
+        contentType: "text",
+        content: thanks[Math.abs(character.id.length + amount) % thanks.length],
+        aiGenerated: true,
+        riskLevel: "L0",
+        createdAt: replyAt,
+        modelName: "red-packet-receipt"
+      };
+      setState((prev) => ({
+        ...prev,
+        messages: [
+          ...prev.messages.map((item) =>
+            item.id === message.id && item.redPacket
+              ? {
+                  ...item,
+                  redPacket: {
+                    ...item.redPacket,
+                    status: "opened" as const,
+                    openedAt: replyAt
+                  }
+                }
+              : item
+          ),
+          reply
+        ],
+        conversations: prev.conversations.map((item) =>
+          item.id === conversation.id ? { ...item, lastMessageAt: replyAt, unreadCount: 0 } : item
+        )
+      }));
+    }, 760);
+  };
+
+  const receiveRedPacket = (message: Message) => {
+    if (message.senderType !== "ai" || message.contentType !== "red_packet" || message.redPacket?.status !== "unopened") return;
+    const amount = Math.max(0, Math.round(message.redPacket.amount || 0));
+    const openedAt = new Date().toISOString();
+    setState((prev) => ({
+      ...prev,
+      wallet: {
+        ...prev.wallet,
+        balance: prev.wallet.balance + amount,
+        totalReceived: prev.wallet.totalReceived + amount
+      },
+      messages: prev.messages.map((item) =>
+        item.id === message.id
+          ? {
+              ...item,
+              redPacket: {
+                ...item.redPacket!,
+                status: "opened",
+                openedAt
+              }
+            }
+          : item
+      )
+    }));
   };
 
   const handleChatImageFile = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -1660,7 +1841,8 @@ function ChatView({
         userMessage: content,
         recentMessages: messages.slice(-12),
         memorySummary,
-        globalSkillPrompt: state.settings.globalSkillPrompt
+        globalSkillPrompt: state.settings.globalSkillPrompt,
+        globalSkillIds: state.settings.globalSkillIds
       })
       .catch(async () => {
         const fallback = await localProvider.chat({
@@ -1668,7 +1850,8 @@ function ChatView({
           userMessage: content,
           recentMessages: messages.slice(-12),
           memorySummary,
-          globalSkillPrompt: state.settings.globalSkillPrompt
+          globalSkillPrompt: state.settings.globalSkillPrompt,
+          globalSkillIds: state.settings.globalSkillIds
         });
         return { ...fallback, modelName: "local-fallback-v1" };
       });
@@ -1687,6 +1870,30 @@ function ChatView({
         modelName: result.modelName
       };
       const outgoing: Message[] = [aiMessage];
+      const redPacketCue = /红包|钱|奖励|打赏|恭喜|生日|开心|加油|辛苦|难过|安慰|哄我|鼓励/.test(`${content} ${result.content}`);
+      const redPacketEnabled =
+        hasSkill(character, state.settings.globalSkillIds || [], "red_packet") ||
+        hasSkill(character, state.settings.globalSkillIds || [], "playful_combo");
+      if (result.riskLevel !== "L3" && result.riskLevel !== "L4" && (redPacketCue || (redPacketEnabled && /加油|辛苦|难过|开心|恭喜|生日/.test(content)))) {
+        const amount = pickRedPacketAmount(`${character.id}${content}${outgoing.length}`);
+        outgoing.push({
+          id: createId("msg"),
+          conversationId: conversation.id,
+          senderType: "ai",
+          senderCharacterId: character.id,
+          contentType: "red_packet",
+          content: "一点心意，收一下",
+          redPacket: {
+            amount,
+            blessing: "一点心意，收一下",
+            status: "unopened"
+          },
+          aiGenerated: true,
+          riskLevel: "L0",
+          createdAt: new Date().toISOString(),
+          modelName: "red-packet-skill"
+        });
+      }
 
       if (shouldAttachImageFromText(content) && result.riskLevel !== "L3" && result.riskLevel !== "L4") {
         const images = await searchImages(imageQueryFromText(content, character), 8).catch(() => []);
@@ -1739,9 +1946,10 @@ function ChatView({
   const chatBackgroundStyle = chatBackgroundUrl
     ? { backgroundImage: `url("${chatBackgroundUrl.replace(/"/g, "%22")}")` }
     : undefined;
+  const drawerOpen = showStickers || showImagePicker || showMoreActions || showRedPacketPanel;
 
   return (
-    <section className="chat-view">
+    <section className={`chat-view ${drawerOpen ? "has-open-drawer" : ""}`}>
       <header className="chat-header">
         <button className="icon-button" onClick={close}>
           <ChevronLeft size={22} />
@@ -1781,6 +1989,28 @@ function ChatView({
                   <img className="message-image" src={message.media.url} alt={message.media.title || ""} />
                 ) : message.contentType === "sticker" && message.media ? (
                   <img className="message-sticker" src={message.media.url} alt={message.media.label || ""} />
+                ) : message.contentType === "red_packet" && message.redPacket ? (
+                  <button
+                    type="button"
+                    className="red-packet-card"
+                    onClick={() => receiveRedPacket(message)}
+                    disabled={mine || message.redPacket.status !== "unopened"}
+                  >
+                    <span className="red-packet-mark">¥</span>
+                    <span className="red-packet-main">
+                      <b>{message.redPacket.blessing || "恭喜发财，大吉大利"}</b>
+                      <small>
+                        {mine
+                          ? message.redPacket.status === "opened"
+                            ? `对方已领取 ${formatMoney(message.redPacket.amount)}`
+                            : `已发送 ${formatMoney(message.redPacket.amount)}`
+                          : message.redPacket.status === "opened"
+                            ? `已领取 ${formatMoney(message.redPacket.amount)}`
+                            : "微信红包"}
+                      </small>
+                    </span>
+                    {!mine && message.redPacket.status === "unopened" && <span className="red-packet-open">开</span>}
+                  </button>
                 ) : (
                   message.content
                 )}
@@ -1800,6 +2030,65 @@ function ChatView({
           </div>
         )}
       </div>
+
+      <form className="composer" onSubmit={sendMessage}>
+        <button type="button" className="tool-button" title="语音">
+          <Mic size={iconSize} />
+        </button>
+        <input
+          value={text}
+          onChange={(event) => {
+            setText(event.target.value);
+            if (event.target.value.trim()) {
+              setShowStickers(false);
+              setShowImagePicker(false);
+              setShowMoreActions(false);
+              setShowRedPacketPanel(false);
+            }
+          }}
+          onFocus={() => {
+            setShowStickers(false);
+            setShowImagePicker(false);
+            setShowMoreActions(false);
+            setShowRedPacketPanel(false);
+            window.setTimeout(scrollToBottom, 260);
+          }}
+          placeholder="发消息"
+          maxLength={500}
+        />
+        <button
+          type="button"
+          className="tool-button"
+          onClick={() => {
+            setShowStickers((value) => !value);
+            setShowImagePicker(false);
+            setShowMoreActions(false);
+            setShowRedPacketPanel(false);
+          }}
+          title="表情"
+        >
+          <Smile size={iconSize} />
+        </button>
+        {text.trim() ? (
+          <button className="send-button text-send-button" type="submit">
+            发送
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="tool-button plus-tool-button"
+            onClick={() => {
+              setShowMoreActions((value) => !value);
+              setShowImagePicker(false);
+              setShowStickers(false);
+              setShowRedPacketPanel(false);
+            }}
+            title="更多"
+          >
+            <Plus size={iconSize} />
+          </button>
+        )}
+      </form>
 
       {showStickers && (
         <div className="chat-drawer sticker-drawer">
@@ -1826,43 +2115,72 @@ function ChatView({
         </div>
       )}
 
-      <form className="composer" onSubmit={sendMessage}>
-        <button type="button" className="tool-button" title="语音">
-          <Mic size={iconSize} />
-        </button>
-        <input
-          value={text}
-          onChange={(event) => setText(event.target.value)}
-          onFocus={() => window.setTimeout(scrollToBottom, 260)}
-          placeholder="发消息"
-          maxLength={500}
-        />
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => {
-            setShowStickers((value) => !value);
-            setShowImagePicker(false);
-          }}
-          title="表情"
-        >
-          <Smile size={iconSize} />
-        </button>
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => {
-            setShowImagePicker((value) => !value);
-            setShowStickers(false);
-          }}
-          title="图片"
-        >
-          <Image size={iconSize} />
-        </button>
-        <button className="send-button" type="submit" disabled={!text.trim()}>
-          <Send size={18} />
-        </button>
-      </form>
+      {showMoreActions && (
+        <div className="chat-drawer more-drawer">
+          <button
+            type="button"
+            onClick={() => {
+              setShowImagePicker(true);
+              setShowStickers(false);
+              setShowRedPacketPanel(false);
+              setShowMoreActions(false);
+            }}
+          >
+            <span><Image size={24} /></span>
+            <b>照片</b>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setShowRedPacketPanel(true);
+              setShowImagePicker(false);
+              setShowStickers(false);
+              setShowMoreActions(false);
+            }}
+          >
+            <span className="red-action-icon">¥</span>
+            <b>红包</b>
+          </button>
+          <button type="button" onClick={() => setShowStickers(true)}>
+            <span><Smile size={24} /></span>
+            <b>表情</b>
+          </button>
+        </div>
+      )}
+
+      {showRedPacketPanel && (
+        <form className="chat-drawer red-packet-panel" onSubmit={sendRedPacket}>
+          <div className="red-packet-panel-title">
+            <b>红包</b>
+            <span>余额 {formatMoney(state.wallet.balance)}</span>
+          </div>
+          <label className="red-packet-field">
+            <span>单个金额</span>
+            <div className="red-packet-money-input">
+              <input
+                type="number"
+                min="1"
+                max={state.wallet.balance}
+                value={redPacketAmount}
+                onChange={(event) => setRedPacketAmount(event.target.value)}
+              />
+              <b>元</b>
+            </div>
+          </label>
+          <label className="red-packet-field">
+            <span>留言</span>
+            <input
+              value={redPacketBlessing}
+              maxLength={24}
+              onChange={(event) => setRedPacketBlessing(event.target.value)}
+            />
+          </label>
+          <div className="red-packet-amount-preview">{formatMoney(Number(redPacketAmount) || 0)}</div>
+          <button type="submit" disabled={!Number(redPacketAmount) || Number(redPacketAmount) > state.wallet.balance}>
+            塞钱进红包
+          </button>
+        </form>
+      )}
       {showChatActions && (
         <ActionSheet
           title={conversation.title}

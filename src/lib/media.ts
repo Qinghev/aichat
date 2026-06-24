@@ -62,7 +62,13 @@ export const stickerPack: MediaAsset[] = [
   { id: "stk_chi", type: "sticker", emoji: "🍜", label: "先吃饭", tone: "#f9d1a8", url: stickerSvg("🍜", "先吃饭", "#f9d1a8") },
   { id: "stk_kan", type: "sticker", emoji: "👀", label: "我看看", tone: "#ccefe8", url: stickerSvg("👀", "我看看", "#ccefe8") },
   { id: "stk_zan", type: "sticker", emoji: "✨", label: "可以", tone: "#e9d8ff", url: stickerSvg("✨", "可以", "#e9d8ff") },
-  { id: "stk_shui", type: "sticker", emoji: "💤", label: "晚安", tone: "#cfd7e6", url: stickerSvg("💤", "晚安", "#cfd7e6") }
+  { id: "stk_shui", type: "sticker", emoji: "💤", label: "晚安", tone: "#cfd7e6", url: stickerSvg("💤", "晚安", "#cfd7e6") },
+  { id: "stk_jiaoyou", type: "sticker", emoji: "💪", label: "加油", tone: "#d7f7c8", url: stickerSvg("💪", "加油", "#d7f7c8") },
+  { id: "stk_qingzhu", type: "sticker", emoji: "🎉", label: "庆祝", tone: "#ffe0b8", url: stickerSvg("🎉", "庆祝", "#ffe0b8") },
+  { id: "stk_wuyu", type: "sticker", emoji: "😶", label: "无语", tone: "#e1e5ea", url: stickerSvg("😶", "无语", "#e1e5ea") },
+  { id: "stk_kelian", type: "sticker", emoji: "🥺", label: "可怜", tone: "#d9edff", url: stickerSvg("🥺", "可怜", "#d9edff") },
+  { id: "stk_bixin", type: "sticker", emoji: "🫰", label: "比心", tone: "#ffd6e2", url: stickerSvg("🫰", "比心", "#ffd6e2") },
+  { id: "stk_haode", type: "sticker", emoji: "👌", label: "好的", tone: "#caf1df", url: stickerSvg("👌", "好的", "#caf1df") }
 ];
 
 const readBlobAsDataUrl = (blob: Blob) =>

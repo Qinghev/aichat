@@ -1,4 +1,5 @@
 import { makeInitialState } from "../data/seed";
+import { applyWeeklyWalletCredit, normalizeWallet } from "./wallet";
 import type { AppState, MediaAsset } from "../types";
 
 const STORAGE_KEY = "ai-chat-sandbox-state-v1";
@@ -36,12 +37,21 @@ const migrateState = (state: AppState): AppState => {
         ...character,
         avatarUrl: character.avatarUrl || seedCharacter?.avatarUrl || "",
         album: character.album || seedCharacter?.album || [],
-        skillPrompt: character.skillPrompt || seedCharacter?.skillPrompt || ""
+        skillPrompt: character.skillPrompt || seedCharacter?.skillPrompt || "",
+        skillIds: character.skillIds || seedCharacter?.skillIds || []
       };
     }),
     messages: state.messages.map((message) => ({
       ...message,
-      media: message.media ? normalizeMedia(message.media, 0) : undefined
+      media: message.media ? normalizeMedia(message.media, 0) : undefined,
+      redPacket: message.redPacket
+        ? {
+            amount: Number(message.redPacket.amount) || 0,
+            blessing: message.redPacket.blessing || message.content || "",
+            status: message.redPacket.status || "sent",
+            openedAt: message.redPacket.openedAt
+          }
+        : undefined
     })),
     conversations: state.conversations.map((conversation) => ({
       ...conversation,
@@ -51,19 +61,26 @@ const migrateState = (state: AppState): AppState => {
     user: {
       ...state.user,
       avatarUrl: state.user.avatarUrl || initialState.user.avatarUrl || ""
-    }
+    },
+    settings: {
+      ...initialState.settings,
+      ...state.settings,
+      globalSkillIds: state.settings?.globalSkillIds || initialState.settings.globalSkillIds || []
+    },
+    wallet: normalizeWallet(state.wallet)
   };
 };
 
 export const loadAppState = (): AppState => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return migrateState(makeInitialState());
+    if (!raw) return applyWeeklyWalletCredit(migrateState(makeInitialState()));
     const parsed = JSON.parse(raw) as AppState;
-    const state = migrateState({
+    let state = migrateState({
       ...makeInitialState(),
       ...parsed,
       settings: { ...makeInitialState().settings, ...parsed.settings },
+      wallet: { ...makeInitialState().wallet, ...parsed.wallet },
       counters: { ...makeInitialState().counters, ...parsed.counters }
     });
     state.user = { ...state.user, consentAccepted: true };
@@ -72,10 +89,12 @@ export const loadAppState = (): AppState => {
     if (!state.settings.globalSkillPrompt) state.settings.globalSkillPrompt = "";
     if (!state.settings.chatBackgroundUrl) state.settings.chatBackgroundUrl = "";
     if (!state.settings.momentsCoverUrl) state.settings.momentsCoverUrl = "";
+    if (!state.settings.globalSkillIds) state.settings.globalSkillIds = [];
+    state = applyWeeklyWalletCredit(state);
     if (!state.settings.apiKey) state.settings.providerMode = "local_mock";
     return state;
   } catch {
-    return migrateState(makeInitialState());
+    return applyWeeklyWalletCredit(migrateState(makeInitialState()));
   }
 };
 

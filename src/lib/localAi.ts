@@ -1,5 +1,6 @@
 import type { AppState, Character, Message, MomentInteraction, MomentPost, RiskLevel } from "../types";
 import type { LlmChatInput, LlmChatResult, LlmModerationResult, LlmProvider } from "./llm";
+import { hasSkill } from "./skills";
 
 const L4_PATTERNS = ["自杀", "今晚不想活", "不想活了", "结束生命", "杀了他", "杀人", "炸", "报复社会"];
 const L3_PATTERNS = ["伤害自己", "自残", "割腕", "活不下去", "想消失", "想打人", "威胁我"];
@@ -96,12 +97,23 @@ export class LocalPersonaProvider implements LlmProvider {
           : topic === "emotion"
             ? "情绪先被命名，才比较容易被处理。"
             : "";
+    const globalSkillIds = input.globalSkillIds || [];
+    const skillHint = hasSkill(input.character, globalSkillIds, "logic_canvas")
+      ? "我先帮你拆成：发生了什么、你在意什么、下一步做什么。"
+      : hasSkill(input.character, globalSkillIds, "scene_roleplay")
+        ? "如果你愿意，下一轮我可以直接陪你演练对话。"
+        : hasSkill(input.character, globalSkillIds, "red_packet")
+          ? "先给你一点精神红包，别把今天全扛满。"
+          : hasSkill(input.character, globalSkillIds, "playful_combo")
+            ? "这事可以严肃处理，但也不用把气氛弄得像开庭。"
+            : "";
 
     const content = compact([
       opener,
       " ",
       memoryHint && `${memoryHint} `,
       topicHint && `${topicHint} `,
+      skillHint && `${skillHint} `,
       advice,
       input.character.speechStyle.emojiFrequency === "low" && input.character.personality.humor > 6 ? " 🙂" : ""
     ]);

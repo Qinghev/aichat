@@ -1,6 +1,7 @@
 import { Capacitor, CapacitorHttp } from "@capacitor/core";
 import { classifyRisk } from "./localAi";
-import type { Character, Message, RiskLevel, Settings } from "../types";
+import { combinedSkillPrompt } from "./skills";
+import type { Character, Message, RiskLevel, Settings, SkillId } from "../types";
 
 export interface LlmModerationResult {
   riskLevel: RiskLevel;
@@ -13,6 +14,7 @@ export interface LlmChatInput {
   recentMessages: Message[];
   memorySummary: string;
   globalSkillPrompt?: string;
+  globalSkillIds?: SkillId[];
 }
 
 export interface LlmChatResult {
@@ -43,7 +45,12 @@ const optionalPromptBlock = (title: string, content?: string) => {
   return value ? `\n${title}：\n${value}\n` : "";
 };
 
-const buildPersonaPrompt = (character: Character, memorySummary: string, globalSkillPrompt?: string) => `你正在以手机联系人「${character.remarkName}」的口吻和用户聊天。
+const buildPersonaPrompt = (
+  character: Character,
+  memorySummary: string,
+  globalSkillPrompt?: string,
+  globalSkillIds: SkillId[] = []
+) => `你正在以手机联系人「${character.remarkName}」的口吻和用户聊天。
 不要在回复里主动提到模型、生成、系统提示、开发者指令或技术实现。回答要像熟人发消息，短一些，自然一些，可以分段，但不要写成说明书。
 
 优先级：
@@ -62,7 +69,7 @@ const buildPersonaPrompt = (character: Character, memorySummary: string, globalS
 - 语气：${character.speechStyle.tone}
 - 口头禅：${character.speechStyle.catchphrases.join("、")}
 - 性格参数：温暖 ${character.personality.warmth}/10，幽默 ${character.personality.humor}/10，主动 ${character.personality.initiative}/10，理性 ${character.personality.rationality}/10，共情 ${character.personality.emotionalSupport}/10，直接 ${character.personality.directness}/10
-${optionalPromptBlock("全局 Skill", globalSkillPrompt)}${optionalPromptBlock("此联系人 Skill", character.skillPrompt)}
+${optionalPromptBlock("全局 Skill", globalSkillPrompt)}${optionalPromptBlock("Skill 预设", combinedSkillPrompt(character, globalSkillIds))}${optionalPromptBlock("此联系人 Skill", character.skillPrompt)}
 长期记忆摘要：
 ${memorySummary || "暂无"}
 
@@ -76,7 +83,7 @@ const toChatMessages = (input: LlmChatInput): ChatCompletionMessage[] => {
   const messages: ChatCompletionMessage[] = [
     {
       role: "system",
-      content: buildPersonaPrompt(input.character, input.memorySummary, input.globalSkillPrompt)
+      content: buildPersonaPrompt(input.character, input.memorySummary, input.globalSkillPrompt, input.globalSkillIds)
     }
   ];
 

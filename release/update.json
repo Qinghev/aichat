@@ -1,9 +1,9 @@
 {
-    "versionCode":  13,
-    "versionName":  "2.2",
+    "versionCode":  14,
+    "versionName":  "2.3",
     "apkUrl":  "https://qinghev.github.io/aichat/AIChatSandbox-debug.apk",
-    "sha256":  "31B72BEF26144CC15FF876A0F7937CBF26D2F9772D3B6109055014CAF20AA7E1",
-    "notes":  "接入用户自制微信风格界面图标，完善底部导航、发现页、通讯录、我页与朋友圈操作图标。",
+    "sha256":  "BB8AC445087E6D901C98757A1BB0B770E9E8795A77368F64705CDA36142EF74F",
+    "notes":  "新增全局与人物 Skills、联动预设、钱包与红包互动；调整聊天输入栏和红包面板为微信式向下展开。",
     "mandatory":  false,
-    "createdAt":  "2026-06-24T10:32:20Z"
+    "createdAt":  "2026-06-24T13:04:16Z"
 }

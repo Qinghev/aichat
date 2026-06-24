@@ -465,10 +465,18 @@ export const makeInitialState = (): AppState => {
       apiBaseUrl: "https://api.x.ai/v1",
       apiModel: "grok-4.3",
       globalSkillPrompt: "",
+      globalSkillIds: ["memory_callback", "playful_combo"],
       chatBackgroundUrl: "",
       momentsCoverUrl: "",
       textBackupEndpoint: "",
       autoTextBackup: false
+    },
+    wallet: {
+      balance: 5_000_000,
+      weeklyAllowance: 20_000,
+      lastWeeklyCreditAt: new Date().toISOString(),
+      totalSent: 0,
+      totalReceived: 0
     },
     counters: {
       todayProactiveCount: 0,
