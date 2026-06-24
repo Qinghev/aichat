@@ -1946,3 +1946,159 @@ body,
   color: #576b95;
   font-weight: 500;
 }
+
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 8px calc(8px + env(safe-area-inset-bottom));
+  background: rgba(0, 0, 0, 0.28);
+  z-index: 35;
+}
+
+.action-sheet {
+  width: min(100%, 504px);
+  display: grid;
+  gap: 8px;
+}
+
+.sheet-title,
+.sheet-actions,
+.sheet-cancel {
+  overflow: hidden;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.sheet-title {
+  min-height: 42px;
+  display: grid;
+  place-items: center;
+  color: #8a8a8a;
+  font-size: 13px;
+}
+
+.sheet-actions {
+  display: grid;
+}
+
+.sheet-actions button,
+.sheet-cancel {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border: 0;
+  border-bottom: 1px solid #ededed;
+  background: #fff;
+  color: #111;
+}
+
+.sheet-actions button:last-child {
+  border-bottom: 0;
+}
+
+.sheet-actions button:active,
+.sheet-cancel:active {
+  background: #f1f1f1;
+}
+
+.sheet-actions button.danger {
+  color: #e64340;
+}
+
+.sheet-cancel {
+  font-weight: 600;
+}
+
+.avatar-button {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.avatar-button:active,
+.profile-avatar-button:active,
+.cover-avatar-button:active {
+  opacity: 0.82;
+}
+
+button.profile-row {
+  width: 100%;
+  border: 0;
+  text-align: left;
+  color: inherit;
+}
+
+.profile-avatar-button {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+button.profile-edit-row {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid #ededed;
+  background: #fff;
+  text-align: left;
+}
+
+.self-info-card .profile-edit-row:last-child {
+  border-bottom: 0;
+}
+
+.self-avatar-row .avatar {
+  margin-left: auto;
+}
+
+.self-avatar-row svg,
+.static-row svg:last-child {
+  color: #b7b7b7;
+}
+
+.static-row b,
+.static-row svg:first-of-type {
+  margin-left: auto;
+}
+
+.static-row b {
+  color: #777;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.moments-background-preview {
+  aspect-ratio: 16 / 9;
+}
+
+.moments-cover-photo {
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.moments-cover-photo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.06), rgba(0, 0, 0, 0.36));
+  pointer-events: none;
+}
+
+.moments-cover-photo:active::after {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.14), rgba(0, 0, 0, 0.42));
+}
+
+.moments-owner {
+  z-index: 1;
+}

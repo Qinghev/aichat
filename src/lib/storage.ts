@@ -66,6 +66,7 @@ export const loadAppState = (): AppState => {
     if (!state.settings.apiBaseUrl) state.settings.apiBaseUrl = "https://api.x.ai/v1";
     if (!state.settings.globalSkillPrompt) state.settings.globalSkillPrompt = "";
     if (!state.settings.chatBackgroundUrl) state.settings.chatBackgroundUrl = "";
+    if (!state.settings.momentsCoverUrl) state.settings.momentsCoverUrl = "";
     if (!state.settings.apiKey) state.settings.providerMode = "local_mock";
     return state;
   } catch {
@@ -74,7 +75,11 @@ export const loadAppState = (): AppState => {
 };
 
 export const saveAppState = (state: AppState) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    // Large local images can exceed WebView storage. Keep the running state usable.
+  }
 };
 
 export const resetAppState = () => {

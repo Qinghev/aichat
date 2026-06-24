@@ -1,9 +1,9 @@
 {
-    "versionCode":  7,
-    "versionName":  "1.6",
+    "versionCode":  8,
+    "versionName":  "1.7",
     "apkUrl":  "https://qinghev.github.io/aichat/AIChatSandbox-debug.apk",
-    "sha256":  "A49B5A5451DDD764A09BFC1A4C3CDE1C254925D400753FB9372FF9F984471C95",
-    "notes":  "Improve WeChat-like entry, avatar preview, and chat background settings",
+    "sha256":  "465C216F7E2A5916550297072681476DEB038BCA87024A95F75DCFE090DE1455",
+    "notes":  "Fix avatar image display, add profile menus, and support moments cover backgrounds",
     "mandatory":  false,
-    "createdAt":  "2026-06-23T11:51:27Z"
+    "createdAt":  "2026-06-24T03:38:48Z"
 }

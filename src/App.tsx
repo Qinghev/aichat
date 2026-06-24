@@ -134,6 +134,45 @@ function AiBadge() {
   return null;
 }
 
+function ActionSheet({
+  title,
+  actions,
+  onClose
+}: {
+  title?: string;
+  actions: Array<{ label: string; icon?: ReactNode; danger?: boolean; onClick: () => void }>;
+  onClose: () => void;
+}) {
+  const run = (action: () => void) => {
+    action();
+    onClose();
+  };
+
+  return (
+    <div className="sheet-backdrop" onClick={onClose}>
+      <div className="action-sheet" onClick={(event) => event.stopPropagation()}>
+        {title && <div className="sheet-title">{title}</div>}
+        <div className="sheet-actions">
+          {actions.map((action) => (
+            <button
+              type="button"
+              className={action.danger ? "danger" : ""}
+              key={action.label}
+              onClick={() => run(action.onClick)}
+            >
+              {action.icon}
+              <span>{action.label}</span>
+            </button>
+          ))}
+        </div>
+        <button type="button" className="sheet-cancel" onClick={onClose}>
+          取消
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function ImageSearchPanel({
   initialQuery,
   onPick
@@ -206,6 +245,7 @@ function AvatarEditor({
     const file = event.target.files?.[0];
     if (!file) return;
     const media = await fileToMediaAsset(file, "avatar");
+    setUrl(media.url);
     onSave(media.url);
     onClose();
   };
@@ -302,15 +342,21 @@ function ChatsTab({
 function ContactsTab({
   state,
   onOpen,
-  onAddCharacter
+  onAddCharacter,
+  addRequest
 }: {
   state: AppState;
   onOpen: (characterId: string) => void;
   onAddCharacter: (character: Character) => void;
+  addRequest: number;
 }) {
   const [isAdding, setIsAdding] = useState(false);
   const [name, setName] = useState("");
   const [role, setRole] = useState("自定义朋友");
+
+  useEffect(() => {
+    if (addRequest > 0) setIsAdding(true);
+  }, [addRequest]);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -512,6 +558,7 @@ function MomentsTab({
   onPublish,
   onToggleLike,
   onComment,
+  onEditCover,
   generating
 }: {
   state: AppState;
@@ -520,6 +567,7 @@ function MomentsTab({
   onPublish: (content: string, media: MediaAsset[]) => void;
   onToggleLike: (postId: string) => void;
   onComment: (postId: string) => void;
+  onEditCover: () => void;
   generating: boolean;
 }) {
   const [isComposing, setIsComposing] = useState(false);
@@ -542,7 +590,13 @@ function MomentsTab({
         onScroll={(event) => setCoverScrolled(event.currentTarget.scrollTop > 210)}
       >
         <div className="moments-cover">
-          <div className="moments-cover-photo" />
+          <button
+            type="button"
+            className={`moments-cover-photo ${state.settings.momentsCoverUrl ? "has-custom-cover" : ""}`}
+            onClick={onEditCover}
+            title="更换朋友圈背景"
+            style={state.settings.momentsCoverUrl ? { backgroundImage: `url("${state.settings.momentsCoverUrl.replace(/"/g, "%22")}")` } : undefined}
+          />
           <div className="moments-owner">
             <span>{state.user.displayName}</span>
             <button className="cover-avatar-button" onClick={() => setIsComposing(true)} title="发朋友圈">
@@ -682,6 +736,7 @@ function CharacterProfilePage({
   onEditAvatar: () => void;
   onUpdate: (character: Character) => void;
 }) {
+  const [showActions, setShowActions] = useState(false);
   const updateField = (field: keyof Character, value: string) => {
     onUpdate({ ...character, [field]: value });
   };
@@ -697,7 +752,7 @@ function CharacterProfilePage({
           <ChevronLeft size={22} />
         </button>
         <div className="chat-title">详细资料</div>
-        <button className="icon-button" onClick={onEditAvatar} title="设置头像">
+        <button className="icon-button" onClick={() => setShowActions(true)} title="更多">
           <MoreHorizontal size={22} />
         </button>
       </header>
@@ -834,32 +889,48 @@ function CharacterProfilePage({
           发消息
         </button>
       </div>
+      {showActions && (
+        <ActionSheet
+          title={character.remarkName}
+          onClose={() => setShowActions(false)}
+          actions={[
+            { label: "设置头像", icon: <Image size={18} />, onClick: onEditAvatar },
+            { label: "发消息", icon: <MessageCircle size={18} />, onClick: onMessage },
+            {
+              label: character.enabled ? "停用联系人" : "启用联系人",
+              icon: character.enabled ? <Trash2 size={18} /> : <RefreshCw size={18} />,
+              danger: character.enabled,
+              onClick: () => onUpdate({ ...character, enabled: !character.enabled })
+            }
+          ]}
+        />
+      )}
     </section>
   );
 }
 
 function MeTab({
   state,
-  onEditAvatar,
+  onOpenProfile,
   onOpenSettings
 }: {
   state: AppState;
-  onEditAvatar: () => void;
+  onOpenProfile: () => void;
   onOpenSettings: () => void;
 }) {
   return (
     <section className="screen-body me-body">
-      <div className="profile-row me-profile-row" onClick={onEditAvatar}>
-        <button className="profile-avatar-button" onClick={onEditAvatar} title="设置头像">
+      <button type="button" className="profile-row me-profile-row" onClick={onOpenProfile} title="个人信息">
+        <span className="profile-avatar-button">
           <UserAvatar user={state.user} size="lg" />
-        </button>
+        </span>
         <div>
           <div className="profile-name">{state.user.displayName}</div>
           <div className="profile-sub">微信号：qinghe</div>
         </div>
         <QrCode className="profile-qr-icon" size={19} />
         <ChevronRight className="profile-edit-icon" size={18} />
-      </div>
+      </button>
 
       <div className="settings-block me-list-block">
         <button className="setting-row">
@@ -902,6 +973,72 @@ function MeTab({
           <ChevronRight size={18} />
         </button>
       </div>
+    </section>
+  );
+}
+
+function UserProfilePage({
+  user,
+  onBack,
+  onEditAvatar,
+  onEditMomentsCover,
+  onOpenSettings,
+  onUpdateName
+}: {
+  user: UserProfile;
+  onBack: () => void;
+  onEditAvatar: () => void;
+  onEditMomentsCover: () => void;
+  onOpenSettings: () => void;
+  onUpdateName: (name: string) => void;
+}) {
+  const [showActions, setShowActions] = useState(false);
+
+  return (
+    <section className="profile-page">
+      <header className="chat-header profile-header">
+        <button className="icon-button" onClick={onBack}>
+          <ChevronLeft size={22} />
+        </button>
+        <div className="chat-title">个人信息</div>
+        <button className="icon-button" onClick={() => setShowActions(true)} title="更多">
+          <MoreHorizontal size={22} />
+        </button>
+      </header>
+
+      <div className="profile-scroll">
+        <section className="wechat-card self-info-card">
+          <button type="button" className="profile-edit-row self-avatar-row" onClick={onEditAvatar}>
+            <span>头像</span>
+            <UserAvatar user={user} size="lg" />
+            <ChevronRight size={18} />
+          </button>
+          <label className="profile-edit-row">
+            <span>名字</span>
+            <input value={user.displayName} onChange={(event) => onUpdateName(event.target.value || "我")} />
+          </label>
+          <div className="profile-edit-row static-row">
+            <span>微信号</span>
+            <b>qinghe</b>
+          </div>
+          <div className="profile-edit-row static-row">
+            <span>二维码名片</span>
+            <QrCode size={19} />
+            <ChevronRight size={18} />
+          </div>
+        </section>
+      </div>
+      {showActions && (
+        <ActionSheet
+          title="个人信息"
+          onClose={() => setShowActions(false)}
+          actions={[
+            { label: "更换头像", icon: <Image size={18} />, onClick: onEditAvatar },
+            { label: "朋友圈背景", icon: <Camera size={18} />, onClick: onEditMomentsCover },
+            { label: "设置", icon: <SlidersHorizontal size={18} />, onClick: onOpenSettings }
+          ]}
+        />
+      )}
     </section>
   );
 }
@@ -976,6 +1113,14 @@ function SettingsPanel({
     if (!file) return;
     const media = await fileToMediaAsset(file, "chat-background");
     updateSetting("chatBackgroundUrl", media.url);
+    event.target.value = "";
+  };
+
+  const handleMomentsCoverFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const media = await fileToMediaAsset(file, "moments-background");
+    updateSetting("momentsCoverUrl", media.url);
     event.target.value = "";
   };
 
@@ -1098,6 +1243,39 @@ function SettingsPanel({
         </section>
 
         <section className="settings-section">
+          <h3>朋友圈背景</h3>
+          <div className="chat-background-preview moments-background-preview">
+            {state.settings.momentsCoverUrl ? (
+              <img src={state.settings.momentsCoverUrl} alt="" />
+            ) : (
+              <span>默认背景</span>
+            )}
+          </div>
+          <label className="file-row">
+            <Upload size={18} />
+            从手机相册选择
+            <input type="file" accept="image/*" onChange={handleMomentsCoverFile} />
+          </label>
+          <label>
+            <span>图片地址</span>
+            <input
+              value={state.settings.momentsCoverUrl}
+              onChange={(event) => updateSetting("momentsCoverUrl", event.target.value)}
+              placeholder="https://..."
+            />
+          </label>
+          <ImageSearchPanel
+            initialQuery="朋友圈 封面 风景"
+            onPick={(asset) => updateSetting("momentsCoverUrl", asset.url)}
+          />
+          {state.settings.momentsCoverUrl && (
+            <button type="button" className="secondary-button" onClick={() => updateSetting("momentsCoverUrl", "")}>
+              使用默认背景
+            </button>
+          )}
+        </section>
+
+        <section className="settings-section">
           <h3>版本更新</h3>
           <button type="button" className="primary-button" onClick={checkUpdateNow}>
             检查更新
@@ -1156,17 +1334,24 @@ function ChatView({
   state,
   conversation,
   close,
-  setState
+  setState,
+  onOpenProfile,
+  onOpenUserProfile,
+  onOpenSettings
 }: {
   state: AppState;
   conversation: Conversation;
   close: () => void;
   setState: (updater: AppState | ((prev: AppState) => AppState)) => void;
+  onOpenProfile: (characterId: string) => void;
+  onOpenUserProfile: () => void;
+  onOpenSettings: () => void;
 }) {
   const [text, setText] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const [showStickers, setShowStickers] = useState(false);
   const [showImagePicker, setShowImagePicker] = useState(false);
+  const [showChatActions, setShowChatActions] = useState(false);
   const messageListRef = useRef<HTMLDivElement | null>(null);
   const character = state.characters.find((item) => item.id === conversation.characterId)!;
   const messages = state.messages.filter((message) => message.conversationId === conversation.id);
@@ -1220,6 +1405,31 @@ function ChatView({
     if (!file) return;
     sendMediaMessage(await fileToMediaAsset(file, "chat"), "image");
     event.target.value = "";
+  };
+
+  const togglePinned = () => {
+    setState((prev) => ({
+      ...prev,
+      conversations: prev.conversations.map((item) =>
+        item.id === conversation.id ? { ...item, pinned: !item.pinned } : item
+      )
+    }));
+  };
+
+  const toggleMuted = () => {
+    setState((prev) => ({
+      ...prev,
+      conversations: prev.conversations.map((item) =>
+        item.id === conversation.id ? { ...item, muted: !item.muted } : item
+      )
+    }));
+  };
+
+  const clearConversationMessages = () => {
+    setState((prev) => ({
+      ...prev,
+      messages: prev.messages.filter((message) => message.conversationId !== conversation.id || message.senderType === "system")
+    }));
   };
 
   const sendMessage = async (event?: FormEvent) => {
@@ -1355,7 +1565,7 @@ function ChatView({
             <AiBadge />
           </div>
         </div>
-        <button className="icon-button">
+        <button className="icon-button" onClick={() => setShowChatActions(true)} title="聊天信息">
           <MoreHorizontal size={22} />
         </button>
       </header>
@@ -1370,7 +1580,11 @@ function ChatView({
           const system = false;
           return (
             <div className={`message-row ${mine ? "mine" : ""} ${system ? "system" : ""}`} key={message.id}>
-              {!mine && !system && <Avatar character={character} size="sm" />}
+              {!mine && !system && (
+                <button type="button" className="avatar-button" onClick={() => onOpenProfile(character.id)} title="查看资料">
+                  <Avatar character={character} size="sm" />
+                </button>
+              )}
               <div
                 className={`bubble bubble-${message.contentType} ${
                   message.riskLevel === "L3" || message.riskLevel === "L4" ? "risk" : ""
@@ -1384,7 +1598,11 @@ function ChatView({
                   message.content
                 )}
               </div>
-              {mine && !system && <UserAvatar user={state.user} size="sm" />}
+              {mine && !system && (
+                <button type="button" className="avatar-button" onClick={onOpenUserProfile} title="个人信息">
+                  <UserAvatar user={state.user} size="sm" />
+                </button>
+              )}
             </div>
           );
         })}
@@ -1458,6 +1676,19 @@ function ChatView({
           <Send size={18} />
         </button>
       </form>
+      {showChatActions && (
+        <ActionSheet
+          title={conversation.title}
+          onClose={() => setShowChatActions(false)}
+          actions={[
+            { label: "查看资料", icon: <UserRound size={18} />, onClick: () => onOpenProfile(character.id) },
+            { label: conversation.pinned ? "取消置顶" : "置顶聊天", icon: <Pin size={18} />, onClick: togglePinned },
+            { label: conversation.muted ? "关闭免打扰" : "消息免打扰", icon: <BellOff size={18} />, onClick: toggleMuted },
+            { label: "设置聊天背景", icon: <Image size={18} />, onClick: onOpenSettings },
+            { label: "清空聊天记录", icon: <Trash2 size={18} />, danger: true, onClick: clearConversationMessages }
+          ]}
+        />
+      )}
     </section>
   );
 }
@@ -1486,11 +1717,15 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<TabKey>("chats");
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [activeProfileCharacterId, setActiveProfileCharacterId] = useState<string | null>(null);
+  const [isUserProfileOpen, setIsUserProfileOpen] = useState(false);
   const [isMomentsOpen, setIsMomentsOpen] = useState(false);
   const [editingCharacterId, setEditingCharacterId] = useState<string | null>(null);
   const [isEditingUserAvatar, setIsEditingUserAvatar] = useState(false);
+  const [isEditingMomentsCover, setIsEditingMomentsCover] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isGeneratingMoment, setIsGeneratingMoment] = useState(false);
+  const [isMainActionsOpen, setIsMainActionsOpen] = useState(false);
+  const [addFriendRequest, setAddFriendRequest] = useState(0);
   const lastAutoBackupMessageCount = useRef(0);
   const historyReady = useRef(false);
 
@@ -1502,6 +1737,7 @@ export default function App() {
     setActiveTab("chats");
     setActiveConversationId(null);
     setActiveProfileCharacterId(null);
+    setIsUserProfileOpen(false);
     setIsMomentsOpen(false);
     setState((prev) => ({ ...prev, user: { ...prev.user, lastActiveAt: new Date().toISOString() } }));
     void checkForInternalUpdate();
@@ -1523,7 +1759,7 @@ export default function App() {
   useEffect(() => {
     if (!historyReady.current) {
       window.history.replaceState(
-        { app: "weichat", tab: "chats", conversationId: null, profileCharacterId: null, momentsOpen: false },
+        { app: "weichat", tab: "chats", conversationId: null, profileCharacterId: null, userProfileOpen: false, momentsOpen: false },
         ""
       );
       historyReady.current = true;
@@ -1535,10 +1771,12 @@ export default function App() {
         setActiveTab((view.tab as TabKey) || "chats");
         setActiveConversationId(view.conversationId || null);
         setActiveProfileCharacterId(view.profileCharacterId || null);
+        setIsUserProfileOpen(Boolean(view.userProfileOpen));
         setIsMomentsOpen(Boolean(view.momentsOpen));
       } else {
         setActiveConversationId(null);
         setActiveProfileCharacterId(null);
+        setIsUserProfileOpen(false);
         setIsMomentsOpen(false);
       }
     };
@@ -1558,11 +1796,19 @@ export default function App() {
         setIsEditingUserAvatar(false);
         return;
       }
+      if (isEditingMomentsCover) {
+        setIsEditingMomentsCover(false);
+        return;
+      }
       if (isSettingsOpen) {
         setIsSettingsOpen(false);
         return;
       }
-      if (activeConversationId || activeProfileCharacterId || isMomentsOpen) {
+      if (isMainActionsOpen) {
+        setIsMainActionsOpen(false);
+        return;
+      }
+      if (activeConversationId || activeProfileCharacterId || isUserProfileOpen || isMomentsOpen) {
         window.history.back();
         return;
       }
@@ -1572,7 +1818,17 @@ export default function App() {
     return () => {
       listener.then((handle) => handle.remove()).catch(() => undefined);
     };
-  }, [activeConversationId, activeProfileCharacterId, editingCharacterId, isEditingUserAvatar, isMomentsOpen, isSettingsOpen]);
+  }, [
+    activeConversationId,
+    activeProfileCharacterId,
+    editingCharacterId,
+    isEditingUserAvatar,
+    isEditingMomentsCover,
+    isMainActionsOpen,
+    isMomentsOpen,
+    isSettingsOpen,
+    isUserProfileOpen
+  ]);
 
   const activeConversation = useMemo(
     () => state.conversations.find((conversation) => conversation.id === activeConversationId),
@@ -1587,17 +1843,25 @@ export default function App() {
   const navigateTab = (tab: TabKey) => {
     setActiveConversationId(null);
     setActiveProfileCharacterId(null);
+    setIsUserProfileOpen(false);
     setIsMomentsOpen(false);
     setActiveTab(tab);
-    window.history.pushState({ app: "weichat", tab, conversationId: null, profileCharacterId: null, momentsOpen: false }, "");
+    window.history.pushState(
+      { app: "weichat", tab, conversationId: null, profileCharacterId: null, userProfileOpen: false, momentsOpen: false },
+      ""
+    );
   };
 
   const openConversation = (conversationId: string) => {
     setActiveTab("chats");
     setActiveConversationId(conversationId);
     setActiveProfileCharacterId(null);
+    setIsUserProfileOpen(false);
     setIsMomentsOpen(false);
-    window.history.pushState({ app: "weichat", tab: "chats", conversationId, profileCharacterId: null, momentsOpen: false }, "");
+    window.history.pushState(
+      { app: "weichat", tab: "chats", conversationId, profileCharacterId: null, userProfileOpen: false, momentsOpen: false },
+      ""
+    );
   };
 
   const closeConversation = () => {
@@ -1611,10 +1875,11 @@ export default function App() {
   const openCharacterProfile = (characterId: string) => {
     setActiveProfileCharacterId(characterId);
     setActiveConversationId(null);
+    setIsUserProfileOpen(false);
     setIsMomentsOpen(false);
     setActiveTab("contacts");
     window.history.pushState(
-      { app: "weichat", tab: "contacts", conversationId: null, profileCharacterId: characterId, momentsOpen: false },
+      { app: "weichat", tab: "contacts", conversationId: null, profileCharacterId: characterId, userProfileOpen: false, momentsOpen: false },
       ""
     );
   };
@@ -1627,13 +1892,34 @@ export default function App() {
     setActiveProfileCharacterId(null);
   };
 
+  const openUserProfile = () => {
+    setIsUserProfileOpen(true);
+    setActiveConversationId(null);
+    setActiveProfileCharacterId(null);
+    setIsMomentsOpen(false);
+    setActiveTab("me");
+    window.history.pushState(
+      { app: "weichat", tab: "me", conversationId: null, profileCharacterId: null, userProfileOpen: true, momentsOpen: false },
+      ""
+    );
+  };
+
+  const closeUserProfile = () => {
+    if (window.history.state?.app === "weichat" && window.history.state?.userProfileOpen) {
+      window.history.back();
+      return;
+    }
+    setIsUserProfileOpen(false);
+  };
+
   const openMomentsPage = () => {
     setIsMomentsOpen(true);
     setActiveConversationId(null);
     setActiveProfileCharacterId(null);
+    setIsUserProfileOpen(false);
     setActiveTab("moments");
     window.history.pushState(
-      { app: "weichat", tab: "moments", conversationId: null, profileCharacterId: null, momentsOpen: true },
+      { app: "weichat", tab: "moments", conversationId: null, profileCharacterId: null, userProfileOpen: false, momentsOpen: true },
       ""
     );
   };
@@ -1651,10 +1937,11 @@ export default function App() {
     if (existing) {
       setActiveConversationId(existing.id);
       setActiveProfileCharacterId(null);
+      setIsUserProfileOpen(false);
       setIsMomentsOpen(false);
       setActiveTab("chats");
       window.history.pushState(
-        { app: "weichat", tab: "chats", conversationId: existing.id, profileCharacterId: null, momentsOpen: false },
+        { app: "weichat", tab: "chats", conversationId: existing.id, profileCharacterId: null, userProfileOpen: false, momentsOpen: false },
         ""
       );
     }
@@ -1714,6 +2001,14 @@ export default function App() {
 
   const updateUserAvatar = (avatarUrl: string) => {
     setState((prev) => ({ ...prev, user: { ...prev.user, avatarUrl } }));
+  };
+
+  const updateUserName = (displayName: string) => {
+    setState((prev) => ({ ...prev, user: { ...prev.user, displayName: displayName || "我" } }));
+  };
+
+  const updateMomentsCover = (momentsCoverUrl: string) => {
+    setState((prev) => ({ ...prev, settings: { ...prev.settings, momentsCoverUrl } }));
   };
 
   const publishMoment = (content: string, media: MediaAsset[]) => {
@@ -1844,6 +2139,18 @@ export default function App() {
           conversation={activeConversation}
           close={closeConversation}
           setState={setState}
+          onOpenProfile={openCharacterProfile}
+          onOpenUserProfile={openUserProfile}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+        />
+      ) : isUserProfileOpen ? (
+        <UserProfilePage
+          user={state.user}
+          onBack={closeUserProfile}
+          onEditAvatar={() => setIsEditingUserAvatar(true)}
+          onEditMomentsCover={() => setIsEditingMomentsCover(true)}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          onUpdateName={updateUserName}
         />
       ) : activeProfileCharacter ? (
         <CharacterProfilePage
@@ -1861,6 +2168,7 @@ export default function App() {
           onPublish={publishMoment}
           onToggleLike={toggleMomentLike}
           onComment={addMomentComment}
+          onEditCover={() => setIsEditingMomentsCover(true)}
           generating={isGeneratingMoment}
         />
       ) : (
@@ -1887,7 +2195,7 @@ export default function App() {
                     <Plus size={20} />
                   </button>
                 )}
-                {activeTab !== "chats" && <button className="icon-button">
+                {activeTab !== "chats" && <button className="icon-button" onClick={() => setIsMainActionsOpen(true)} title="更多">
                   <MoreHorizontal size={20} />
                 </button>}
               </div>
@@ -1900,13 +2208,14 @@ export default function App() {
               state={state}
               onOpen={openCharacterProfile}
               onAddCharacter={addCharacter}
+              addRequest={addFriendRequest}
             />
           )}
           {activeTab === "moments" && <DiscoverTab onOpenMoments={openMomentsPage} />}
           {activeTab === "me" && (
             <MeTab
               state={state}
-              onEditAvatar={() => setIsEditingUserAvatar(true)}
+              onOpenProfile={openUserProfile}
               onOpenSettings={() => setIsSettingsOpen(true)}
             />
           )}
@@ -1930,6 +2239,33 @@ export default function App() {
           searchHint={`${state.user.displayName} 头像`}
           onClose={() => setIsEditingUserAvatar(false)}
           onSave={updateUserAvatar}
+        />
+      )}
+      {isEditingMomentsCover && (
+        <AvatarEditor
+          title="设置朋友圈背景"
+          initialUrl={state.settings.momentsCoverUrl}
+          searchHint="朋友圈 封面 风景"
+          onClose={() => setIsEditingMomentsCover(false)}
+          onSave={updateMomentsCover}
+        />
+      )}
+      {isMainActionsOpen && (
+        <ActionSheet
+          title="更多"
+          onClose={() => setIsMainActionsOpen(false)}
+          actions={[
+            {
+              label: "添加朋友",
+              icon: <UserPlus size={18} />,
+              onClick: () => {
+                setAddFriendRequest((value) => value + 1);
+                navigateTab("contacts");
+              }
+            },
+            { label: "朋友圈", icon: <Camera size={18} />, onClick: openMomentsPage },
+            { label: "设置", icon: <SlidersHorizontal size={18} />, onClick: () => setIsSettingsOpen(true) }
+          ]}
         />
       )}
       <div className="debug-summary" aria-hidden="true">

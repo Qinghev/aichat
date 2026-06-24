@@ -73,10 +73,53 @@ const readBlobAsDataUrl = (blob: Blob) =>
     reader.readAsDataURL(blob);
   });
 
+const loadImage = (url: string) =>
+  new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new window.Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Unable to read image."));
+    image.src = url;
+  });
+
+const canvasToDataUrl = (canvas: HTMLCanvasElement, quality: number) =>
+  new Promise<string>((resolve) => {
+    canvas.toBlob(
+      async (blob) => {
+        if (blob) {
+          resolve(await readBlobAsDataUrl(blob));
+          return;
+        }
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      },
+      "image/jpeg",
+      quality
+    );
+  });
+
+const optimizeImageFile = async (file: File, prefix: string) => {
+  const original = await readBlobAsDataUrl(file);
+  try {
+    const image = await loadImage(original);
+    const maxSide = prefix.includes("avatar") ? 720 : prefix.includes("background") ? 1600 : 1280;
+    const scale = Math.min(1, maxSide / Math.max(image.naturalWidth || image.width, image.naturalHeight || image.height));
+    const width = Math.max(1, Math.round((image.naturalWidth || image.width) * scale));
+    const height = Math.max(1, Math.round((image.naturalHeight || image.height) * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) return original;
+    context.drawImage(image, 0, 0, width, height);
+    return await canvasToDataUrl(canvas, prefix.includes("avatar") ? 0.88 : 0.82);
+  } catch {
+    return original;
+  }
+};
+
 export const fileToMediaAsset = async (file: File, prefix = "media"): Promise<MediaAsset> => ({
   id: `${prefix}_${crypto.randomUUID()}`,
   type: "image",
-  url: await readBlobAsDataUrl(file),
+  url: await optimizeImageFile(file, prefix),
   title: file.name
 });
 

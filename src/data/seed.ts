@@ -465,6 +465,7 @@ export const makeInitialState = (): AppState => {
       apiModel: "grok-4.3",
       globalSkillPrompt: "",
       chatBackgroundUrl: "",
+      momentsCoverUrl: "",
       textBackupEndpoint: "",
       autoTextBackup: false
     },

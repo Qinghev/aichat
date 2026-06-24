@@ -161,6 +161,7 @@ export interface Settings {
   apiModel: string;
   globalSkillPrompt: string;
   chatBackgroundUrl: string;
+  momentsCoverUrl: string;
   textBackupEndpoint: string;
   autoTextBackup: boolean;
 }
