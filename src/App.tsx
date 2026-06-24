@@ -331,12 +331,14 @@ function ContactsTab({
   state,
   onOpen,
   onAddCharacter,
-  addRequest
+  addRequest,
+  isActive
 }: {
   state: AppState;
   onOpen: (characterId: string) => void;
   onAddCharacter: (character: Character) => void;
   addRequest: number;
+  isActive: boolean;
 }) {
   const [isAdding, setIsAdding] = useState(false);
   const [name, setName] = useState("");
@@ -345,6 +347,10 @@ function ContactsTab({
   useEffect(() => {
     if (addRequest > 0) setIsAdding(true);
   }, [addRequest]);
+
+  useEffect(() => {
+    if (!isActive) setIsAdding(false);
+  }, [isActive]);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -2187,6 +2193,8 @@ export default function App() {
     });
   };
 
+  const activeTabIndex = Math.max(0, tabOrder.indexOf(activeTab));
+
   return (
     <div className="app-shell">
       {activeConversation ? (
@@ -2258,23 +2266,32 @@ export default function App() {
             </div>
           </header>
 
-          {activeTab === "chats" && <ChatsTab state={state} openConversation={openConversation} />}
-          {activeTab === "contacts" && (
-            <ContactsTab
-              state={state}
-              onOpen={openCharacterProfile}
-              onAddCharacter={addCharacter}
-              addRequest={addFriendRequest}
-            />
-          )}
-          {activeTab === "moments" && <DiscoverTab onOpenMoments={openMomentsPage} />}
-          {activeTab === "me" && (
-            <MeTab
-              state={state}
-              onOpenProfile={openUserProfile}
-              onOpenSettings={() => setIsSettingsOpen(true)}
-            />
-          )}
+          <div className="tab-pager">
+            <div className="tab-track" style={{ transform: `translate3d(-${activeTabIndex * 100}%, 0, 0)` }}>
+              <div className={`tab-slide ${activeTab === "chats" ? "active" : ""}`} aria-hidden={activeTab !== "chats"}>
+                <ChatsTab state={state} openConversation={openConversation} />
+              </div>
+              <div className={`tab-slide ${activeTab === "contacts" ? "active" : ""}`} aria-hidden={activeTab !== "contacts"}>
+                <ContactsTab
+                  state={state}
+                  onOpen={openCharacterProfile}
+                  onAddCharacter={addCharacter}
+                  addRequest={addFriendRequest}
+                  isActive={activeTab === "contacts"}
+                />
+              </div>
+              <div className={`tab-slide ${activeTab === "moments" ? "active" : ""}`} aria-hidden={activeTab !== "moments"}>
+                <DiscoverTab onOpenMoments={openMomentsPage} />
+              </div>
+              <div className={`tab-slide ${activeTab === "me" ? "active" : ""}`} aria-hidden={activeTab !== "me"}>
+                <MeTab
+                  state={state}
+                  onOpenProfile={openUserProfile}
+                  onOpenSettings={() => setIsSettingsOpen(true)}
+                />
+              </div>
+            </div>
+          </div>
           <BottomTabs active={activeTab} setActive={navigateTab} />
         </div>
       )}
