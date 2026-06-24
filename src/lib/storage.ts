@@ -20,6 +20,7 @@ const normalizeMedia = (item: Partial<MediaAsset> & { tone?: string }, index: nu
 const migrateState = (state: AppState): AppState => {
   const initialState = makeInitialState();
   const existingMomentIds = new Set((state.moments || []).map((post) => post.id));
+  const legacyChatBackgroundUrl = state.settings?.chatBackgroundUrl || "";
   const migratedMoments = (state.moments || []).map((post) => ({
     ...post,
     media: (post.media || []).map((media, index) => normalizeMedia(media, index))
@@ -41,6 +42,10 @@ const migrateState = (state: AppState): AppState => {
     messages: state.messages.map((message) => ({
       ...message,
       media: message.media ? normalizeMedia(message.media, 0) : undefined
+    })),
+    conversations: state.conversations.map((conversation) => ({
+      ...conversation,
+      chatBackgroundUrl: conversation.chatBackgroundUrl || legacyChatBackgroundUrl || ""
     })),
     moments: [...migratedMoments, ...missingSeedMoments],
     user: {

@@ -236,7 +236,8 @@ export const makeInitialState = (): AppState => {
     pinned: index === 0,
     muted: false,
     unreadCount: index < 2 ? 1 : 0,
-    lastMessageAt: new Date(Date.now() - index * 22 * 60 * 1000).toISOString()
+    lastMessageAt: new Date(Date.now() - index * 22 * 60 * 1000).toISOString(),
+    chatBackgroundUrl: ""
   }));
 
   const messages: Message[] = conversations.flatMap((conversation) => {

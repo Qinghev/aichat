@@ -1,9 +1,9 @@
 {
-    "versionCode":  8,
-    "versionName":  "1.7",
+    "versionCode":  9,
+    "versionName":  "1.8",
     "apkUrl":  "https://qinghev.github.io/aichat/AIChatSandbox-debug.apk",
-    "sha256":  "465C216F7E2A5916550297072681476DEB038BCA87024A95F75DCFE090DE1455",
-    "notes":  "Fix avatar image display, add profile menus, and support moments cover backgrounds",
+    "sha256":  "4318742AC8A7FDD6FB1F18D997571B1FBAE6800CAF246D67C9FC0A0E0E47809F",
+    "notes":  "Add swipe tab navigation and per-chat backgrounds; remove avatar URL input",
     "mandatory":  false,
-    "createdAt":  "2026-06-24T03:38:48Z"
+    "createdAt":  "2026-06-24T06:53:42Z"
 }

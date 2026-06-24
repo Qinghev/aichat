@@ -13,7 +13,6 @@ import {
   Heart,
   Image,
   Loader2,
-  Link,
   MapPin,
   MessageCircle,
   MessageSquare,
@@ -41,7 +40,7 @@ import {
 } from "lucide-react";
 import { App as CapacitorApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
-import { ChangeEvent, FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, FormEvent, ReactNode, TouchEvent, useEffect, useMemo, useRef, useState } from "react";
 import { seedCharacters } from "./data/seed";
 import { exportAppState, loadAppState, resetAppState, saveAppState } from "./lib/storage";
 import { formatMomentTime, formatTime, todayKey } from "./lib/time";
@@ -69,6 +68,7 @@ import type { AppState, Character, Conversation, MediaAsset, Message, MomentPost
 const localProvider = new LocalPersonaProvider();
 
 const iconSize = 20;
+const tabOrder: TabKey[] = ["chats", "contacts", "moments", "me"];
 
 const createId = (prefix: string) => `${prefix}_${crypto.randomUUID()}`;
 
@@ -230,12 +230,14 @@ function AvatarEditor({
   title,
   initialUrl,
   searchHint,
+  filePrefix = "avatar",
   onClose,
   onSave
 }: {
   title: string;
   initialUrl?: string;
   searchHint: string;
+  filePrefix?: string;
   onClose: () => void;
   onSave: (avatarUrl: string) => void;
 }) {
@@ -244,14 +246,9 @@ function AvatarEditor({
   const handleFile = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    const media = await fileToMediaAsset(file, "avatar");
+    const media = await fileToMediaAsset(file, filePrefix);
     setUrl(media.url);
     onSave(media.url);
-    onClose();
-  };
-
-  const saveUrl = () => {
-    onSave(url.trim());
     onClose();
   };
 
@@ -270,19 +267,10 @@ function AvatarEditor({
           从手机相册选择
           <input type="file" accept="image/*" onChange={handleFile} />
         </label>
-        <label>
-          <span className="label-with-icon">
-            <Link size={15} />
-            图片地址
-          </span>
-          <input value={url} onChange={(event) => setUrl(event.target.value)} placeholder="https://..." />
-        </label>
-        <button className="primary-button" type="button" onClick={saveUrl}>
-          保存
-        </button>
         <ImageSearchPanel
           initialQuery={searchHint}
           onPick={(asset) => {
+            setUrl(asset.url);
             onSave(asset.url);
             onClose();
           }}
@@ -1108,14 +1096,6 @@ function SettingsPanel({
     setStatus("更新检查已完成。");
   };
 
-  const handleChatBackgroundFile = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    const media = await fileToMediaAsset(file, "chat-background");
-    updateSetting("chatBackgroundUrl", media.url);
-    event.target.value = "";
-  };
-
   const handleMomentsCoverFile = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -1210,39 +1190,6 @@ function SettingsPanel({
         </section>
 
         <section className="settings-section">
-          <h3>聊天背景</h3>
-          <div className="chat-background-preview">
-            {state.settings.chatBackgroundUrl ? (
-              <img src={state.settings.chatBackgroundUrl} alt="" />
-            ) : (
-              <span>默认背景</span>
-            )}
-          </div>
-          <label className="file-row">
-            <Upload size={18} />
-            从手机相册选择
-            <input type="file" accept="image/*" onChange={handleChatBackgroundFile} />
-          </label>
-          <label>
-            <span>图片地址</span>
-            <input
-              value={state.settings.chatBackgroundUrl}
-              onChange={(event) => updateSetting("chatBackgroundUrl", event.target.value)}
-              placeholder="https://..."
-            />
-          </label>
-          <ImageSearchPanel
-            initialQuery="聊天背景 壁纸"
-            onPick={(asset) => updateSetting("chatBackgroundUrl", asset.url)}
-          />
-          {state.settings.chatBackgroundUrl && (
-            <button type="button" className="secondary-button" onClick={() => updateSetting("chatBackgroundUrl", "")}>
-              使用默认背景
-            </button>
-          )}
-        </section>
-
-        <section className="settings-section">
           <h3>朋友圈背景</h3>
           <div className="chat-background-preview moments-background-preview">
             {state.settings.momentsCoverUrl ? (
@@ -1330,6 +1277,60 @@ function SettingsPanel({
   );
 }
 
+function ChatBackgroundEditor({
+  conversation,
+  onClose,
+  onSave
+}: {
+  conversation: Conversation;
+  onClose: () => void;
+  onSave: (conversationId: string, chatBackgroundUrl: string) => void;
+}) {
+  const [previewUrl, setPreviewUrl] = useState(conversation.chatBackgroundUrl || "");
+
+  const save = (chatBackgroundUrl: string) => {
+    setPreviewUrl(chatBackgroundUrl);
+    onSave(conversation.id, chatBackgroundUrl);
+    onClose();
+  };
+
+  const handleFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const media = await fileToMediaAsset(file, `chat-background-${conversation.id}`);
+    save(media.url);
+    event.target.value = "";
+  };
+
+  return (
+    <div className="modal-backdrop">
+      <div className="modal-panel avatar-panel">
+        <button type="button" className="icon-button modal-close" onClick={onClose}>
+          <X size={18} />
+        </button>
+        <h2>设置聊天背景</h2>
+        <div className="chat-background-preview">
+          {previewUrl ? <img src={previewUrl} alt="" /> : <span>默认背景</span>}
+        </div>
+        <label className="file-row">
+          <Upload size={18} />
+          从手机相册选择
+          <input type="file" accept="image/*" onChange={handleFile} />
+        </label>
+        <ImageSearchPanel
+          initialQuery={`${conversation.title} 聊天背景 壁纸`}
+          onPick={(asset) => save(asset.url)}
+        />
+        {previewUrl && (
+          <button type="button" className="secondary-button" onClick={() => save("")}>
+            使用默认背景
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ChatView({
   state,
   conversation,
@@ -1337,7 +1338,7 @@ function ChatView({
   setState,
   onOpenProfile,
   onOpenUserProfile,
-  onOpenSettings
+  onEditBackground
 }: {
   state: AppState;
   conversation: Conversation;
@@ -1345,7 +1346,7 @@ function ChatView({
   setState: (updater: AppState | ((prev: AppState) => AppState)) => void;
   onOpenProfile: (characterId: string) => void;
   onOpenUserProfile: () => void;
-  onOpenSettings: () => void;
+  onEditBackground: () => void;
 }) {
   const [text, setText] = useState("");
   const [isThinking, setIsThinking] = useState(false);
@@ -1548,7 +1549,7 @@ function ChatView({
     }, 520);
   };
 
-  const chatBackgroundUrl = state.settings.chatBackgroundUrl.trim();
+  const chatBackgroundUrl = (conversation.chatBackgroundUrl || "").trim();
   const chatBackgroundStyle = chatBackgroundUrl
     ? { backgroundImage: `url("${chatBackgroundUrl.replace(/"/g, "%22")}")` }
     : undefined;
@@ -1684,7 +1685,7 @@ function ChatView({
             { label: "查看资料", icon: <UserRound size={18} />, onClick: () => onOpenProfile(character.id) },
             { label: conversation.pinned ? "取消置顶" : "置顶聊天", icon: <Pin size={18} />, onClick: togglePinned },
             { label: conversation.muted ? "关闭免打扰" : "消息免打扰", icon: <BellOff size={18} />, onClick: toggleMuted },
-            { label: "设置聊天背景", icon: <Image size={18} />, onClick: onOpenSettings },
+            { label: "设置聊天背景", icon: <Image size={18} />, onClick: onEditBackground },
             { label: "清空聊天记录", icon: <Trash2 size={18} />, danger: true, onClick: clearConversationMessages }
           ]}
         />
@@ -1722,12 +1723,14 @@ export default function App() {
   const [editingCharacterId, setEditingCharacterId] = useState<string | null>(null);
   const [isEditingUserAvatar, setIsEditingUserAvatar] = useState(false);
   const [isEditingMomentsCover, setIsEditingMomentsCover] = useState(false);
+  const [editingBackgroundConversationId, setEditingBackgroundConversationId] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isGeneratingMoment, setIsGeneratingMoment] = useState(false);
   const [isMainActionsOpen, setIsMainActionsOpen] = useState(false);
   const [addFriendRequest, setAddFriendRequest] = useState(0);
   const lastAutoBackupMessageCount = useRef(0);
   const historyReady = useRef(false);
+  const mainSwipeStart = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     saveAppState(state);
@@ -1800,6 +1803,10 @@ export default function App() {
         setIsEditingMomentsCover(false);
         return;
       }
+      if (editingBackgroundConversationId) {
+        setEditingBackgroundConversationId(null);
+        return;
+      }
       if (isSettingsOpen) {
         setIsSettingsOpen(false);
         return;
@@ -1821,6 +1828,7 @@ export default function App() {
   }, [
     activeConversationId,
     activeProfileCharacterId,
+    editingBackgroundConversationId,
     editingCharacterId,
     isEditingUserAvatar,
     isEditingMomentsCover,
@@ -1840,7 +1848,21 @@ export default function App() {
     [activeProfileCharacterId, state.characters]
   );
 
+  const activeBackgroundConversation = useMemo(
+    () => state.conversations.find((conversation) => conversation.id === editingBackgroundConversationId),
+    [editingBackgroundConversationId, state.conversations]
+  );
+
   const navigateTab = (tab: TabKey) => {
+    if (
+      tab === activeTab &&
+      !activeConversationId &&
+      !activeProfileCharacterId &&
+      !isUserProfileOpen &&
+      !isMomentsOpen
+    ) {
+      return;
+    }
     setActiveConversationId(null);
     setActiveProfileCharacterId(null);
     setIsUserProfileOpen(false);
@@ -1955,7 +1977,8 @@ export default function App() {
       pinned: false,
       muted: false,
       unreadCount: 0,
-      lastMessageAt: new Date().toISOString()
+      lastMessageAt: new Date().toISOString(),
+      chatBackgroundUrl: ""
     };
     const systemMessage: Message = {
       id: createId("msg"),
@@ -2009,6 +2032,39 @@ export default function App() {
 
   const updateMomentsCover = (momentsCoverUrl: string) => {
     setState((prev) => ({ ...prev, settings: { ...prev.settings, momentsCoverUrl } }));
+  };
+
+  const updateConversationBackground = (conversationId: string, chatBackgroundUrl: string) => {
+    setState((prev) => ({
+      ...prev,
+      conversations: prev.conversations.map((conversation) =>
+        conversation.id === conversationId ? { ...conversation, chatBackgroundUrl } : conversation
+      )
+    }));
+  };
+
+  const handleMainTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement;
+    if (target.closest("input, textarea, select")) {
+      mainSwipeStart.current = null;
+      return;
+    }
+    const touch = event.touches[0];
+    mainSwipeStart.current = touch ? { x: touch.clientX, y: touch.clientY } : null;
+  };
+
+  const handleMainTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
+    const start = mainSwipeStart.current;
+    mainSwipeStart.current = null;
+    const touch = event.changedTouches[0];
+    if (!start || !touch) return;
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+    if (Math.abs(deltaX) < 70 || Math.abs(deltaX) < Math.abs(deltaY) * 1.35) return;
+    const currentIndex = tabOrder.indexOf(activeTab);
+    const nextIndex = deltaX < 0 ? currentIndex + 1 : currentIndex - 1;
+    const nextTab = tabOrder[nextIndex];
+    if (nextTab) navigateTab(nextTab);
   };
 
   const publishMoment = (content: string, media: MediaAsset[]) => {
@@ -2141,7 +2197,7 @@ export default function App() {
           setState={setState}
           onOpenProfile={openCharacterProfile}
           onOpenUserProfile={openUserProfile}
-          onOpenSettings={() => setIsSettingsOpen(true)}
+          onEditBackground={() => setEditingBackgroundConversationId(activeConversation.id)}
         />
       ) : isUserProfileOpen ? (
         <UserProfilePage
@@ -2172,7 +2228,7 @@ export default function App() {
           generating={isGeneratingMoment}
         />
       ) : (
-        <>
+        <div className="main-stack" onTouchStart={handleMainTouchStart} onTouchEnd={handleMainTouchEnd}>
           <header className="app-header">
             <div className="title-row">
               <h1>
@@ -2220,9 +2276,16 @@ export default function App() {
             />
           )}
           <BottomTabs active={activeTab} setActive={navigateTab} />
-        </>
+        </div>
       )}
       {isSettingsOpen && <SettingsPanel state={state} setState={setState} onClose={() => setIsSettingsOpen(false)} />}
+      {activeBackgroundConversation && (
+        <ChatBackgroundEditor
+          conversation={activeBackgroundConversation}
+          onClose={() => setEditingBackgroundConversationId(null)}
+          onSave={updateConversationBackground}
+        />
+      )}
       {editingCharacterId && (
         <AvatarEditor
           title="设置头像"
@@ -2246,6 +2309,7 @@ export default function App() {
           title="设置朋友圈背景"
           initialUrl={state.settings.momentsCoverUrl}
           searchHint="朋友圈 封面 风景"
+          filePrefix="moments-background"
           onClose={() => setIsEditingMomentsCover(false)}
           onSave={updateMomentsCover}
         />

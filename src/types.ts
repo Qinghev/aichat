@@ -80,6 +80,7 @@ export interface Conversation {
   muted: boolean;
   unreadCount: number;
   lastMessageAt: string;
+  chatBackgroundUrl?: string;
 }
 
 export interface Message {

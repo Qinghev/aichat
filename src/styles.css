@@ -2102,3 +2102,9 @@ button.profile-edit-row {
 .moments-owner {
   z-index: 1;
 }
+
+.main-stack {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
