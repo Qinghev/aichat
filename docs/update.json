@@ -1,9 +1,9 @@
 {
-    "versionCode":  10,
-    "versionName":  "1.9",
+    "versionCode":  11,
+    "versionName":  "2.0",
     "apkUrl":  "https://qinghev.github.io/aichat/AIChatSandbox-debug.apk",
-    "sha256":  "919A6891401C5961D6A7B1B03EADF8C9272CAD188185167F0F581B329EC0A83A",
-    "notes":  "Add smooth card-style sliding between main tabs",
+    "sha256":  "0A493B5B1D097BAC4D882BABA8F731BF67C5EF1802A9D6FEE20C383B972F5219",
+    "notes":  "Refine chat-style icons and replace green launch screen with original splash",
     "mandatory":  false,
-    "createdAt":  "2026-06-24T07:16:08Z"
+    "createdAt":  "2026-06-24T07:44:30Z"
 }

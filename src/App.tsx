@@ -134,6 +134,22 @@ function AiBadge() {
   return null;
 }
 
+function WeIcon({
+  name,
+  tone,
+  className = ""
+}: {
+  name: string;
+  tone?: string;
+  className?: string;
+}) {
+  return (
+    <span className={`wechat-icon wechat-icon-${name} ${tone ? `wechat-icon-${tone}` : ""} ${className}`} aria-hidden="true">
+      <span />
+    </span>
+  );
+}
+
 function ActionSheet({
   title,
   actions,
@@ -168,6 +184,137 @@ function ActionSheet({
         <button type="button" className="sheet-cancel" onClick={onClose}>
           取消
         </button>
+      </div>
+    </div>
+  );
+}
+
+function MainPlusMenu({
+  onClose,
+  actions
+}: {
+  actions: Array<{ label: string; icon: string; tone?: string; onClick: () => void }>;
+  onClose: () => void;
+}) {
+  const run = (action: () => void) => {
+    action();
+    onClose();
+  };
+
+  return (
+    <div className="main-menu-layer" onClick={onClose}>
+      <div className="main-plus-menu" onClick={(event) => event.stopPropagation()}>
+        <span className="main-plus-menu-arrow" aria-hidden="true" />
+        {actions.map((action) => (
+          <button type="button" key={action.label} onClick={() => run(action.onClick)}>
+            <WeIcon name={action.icon} tone={action.tone || "menu"} />
+            <span>{action.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function GlobalSearchPanel({
+  state,
+  onClose,
+  onOpenConversation,
+  onOpenProfile
+}: {
+  state: AppState;
+  onClose: () => void;
+  onOpenConversation: (conversationId: string) => void;
+  onOpenProfile: (characterId: string) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const keyword = query.trim().toLowerCase();
+  const characters = keyword
+    ? state.characters.filter((character) =>
+        [character.remarkName, character.displayName, character.signature, character.roleType]
+          .filter(Boolean)
+          .some((value) => value!.toLowerCase().includes(keyword))
+      )
+    : state.characters.slice(0, 5);
+  const conversations = keyword
+    ? state.conversations.filter((conversation) => conversation.title.toLowerCase().includes(keyword))
+    : state.conversations.slice(0, 5);
+  const messageResults = keyword
+    ? state.messages
+        .filter((message) => message.senderType !== "system" && message.contentType === "text" && message.content.toLowerCase().includes(keyword))
+        .slice(-8)
+        .reverse()
+    : [];
+
+  const openConversation = (conversationId: string) => {
+    onClose();
+    onOpenConversation(conversationId);
+  };
+
+  const openProfile = (characterId: string) => {
+    onClose();
+    onOpenProfile(characterId);
+  };
+
+  return (
+    <div className="search-panel">
+      <div className="search-panel-top">
+        <div className="search-panel-input">
+          <Search size={17} />
+          <input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索" />
+          {query && (
+            <button type="button" onClick={() => setQuery("")}>
+              <X size={15} />
+            </button>
+          )}
+        </div>
+        <button type="button" onClick={onClose}>
+          取消
+        </button>
+      </div>
+      <div className="search-panel-body">
+        {conversations.length > 0 && (
+          <section>
+            <h3>聊天</h3>
+            {conversations.map((conversation) => {
+              const character = state.characters.find((item) => item.id === conversation.characterId);
+              return (
+                <button type="button" key={conversation.id} onClick={() => openConversation(conversation.id)}>
+                  {character && <Avatar character={character} size="sm" />}
+                  <span>{conversation.title}</span>
+                </button>
+              );
+            })}
+          </section>
+        )}
+        {characters.length > 0 && (
+          <section>
+            <h3>联系人</h3>
+            {characters.map((character) => (
+              <button type="button" key={character.id} onClick={() => openProfile(character.id)}>
+                <Avatar character={character} size="sm" />
+                <span>{character.remarkName}</span>
+              </button>
+            ))}
+          </section>
+        )}
+        {messageResults.length > 0 && (
+          <section>
+            <h3>聊天记录</h3>
+            {messageResults.map((message) => {
+              const conversation = state.conversations.find((item) => item.id === message.conversationId);
+              return (
+                <button type="button" key={message.id} onClick={() => conversation && openConversation(conversation.id)}>
+                  <WeIcon name="tab-chat" />
+                  <span>{message.content}</span>
+                </button>
+              );
+            })}
+          </section>
+        )}
+        {keyword && conversations.length === 0 && characters.length === 0 && messageResults.length === 0 && (
+          <div className="search-empty">没有找到相关内容</div>
+        )}
       </div>
     </div>
   );
@@ -389,27 +536,19 @@ function ContactsTab({
   return (
     <section className="screen-body list-body">
       <button className="utility-row" onClick={() => setIsAdding(true)}>
-        <div className="utility-icon green">
-          <UserPlus size={18} />
-        </div>
+        <WeIcon name="new-friend" tone="green" />
         <span>新的朋友</span>
       </button>
       <div className="utility-row static">
-        <div className="utility-icon blue">
-          <Users size={18} />
-        </div>
+        <WeIcon name="group" tone="blue" />
         <span>群聊</span>
       </div>
       <div className="utility-row static">
-        <div className="utility-icon yellow">
-          <Tags size={18} />
-        </div>
+        <WeIcon name="tag" tone="yellow" />
         <span>标签</span>
       </div>
       <div className="utility-row static">
-        <div className="utility-icon teal">
-          <Bookmark size={18} />
-        </div>
+        <WeIcon name="official" tone="teal" />
         <span>公众号</span>
       </div>
       <div className="section-label">联系人</div>
@@ -517,14 +656,14 @@ function MomentComposer({
 
 function DiscoverTab({ onOpenMoments }: { onOpenMoments: () => void }) {
   const rows = [
-    { label: "朋友圈", icon: <Camera size={20} />, className: "blue", onClick: onOpenMoments },
-    { label: "视频号", icon: <Eye size={20} />, className: "orange" },
-    { label: "扫一扫", icon: <QrCode size={20} />, className: "green", gap: true },
-    { label: "看一看", icon: <Sparkles size={20} />, className: "yellow" },
-    { label: "搜一搜", icon: <Search size={20} />, className: "teal" },
-    { label: "购物", icon: <ShoppingBag size={20} />, className: "red", gap: true },
-    { label: "游戏", icon: <Gamepad2 size={20} />, className: "purple" },
-    { label: "小程序", icon: <Plus size={20} />, className: "green", gap: true }
+    { label: "朋友圈", icon: "moments", tone: "blue", onClick: onOpenMoments },
+    { label: "视频号", icon: "channels", tone: "orange" },
+    { label: "扫一扫", icon: "scan", tone: "green", gap: true },
+    { label: "看一看", icon: "look", tone: "yellow" },
+    { label: "搜一搜", icon: "search-grid", tone: "teal" },
+    { label: "购物", icon: "shop", tone: "red", gap: true },
+    { label: "游戏", icon: "game", tone: "purple" },
+    { label: "小程序", icon: "mini", tone: "green", gap: true }
   ];
 
   return (
@@ -536,7 +675,7 @@ function DiscoverTab({ onOpenMoments }: { onOpenMoments: () => void }) {
           onClick={row.onClick}
           type="button"
         >
-          <div className={`utility-icon ${row.className}`}>{row.icon}</div>
+          <WeIcon name={row.icon} tone={row.tone} />
           <span>{row.label}</span>
           <ChevronRight size={18} />
         </button>
@@ -928,7 +1067,7 @@ function MeTab({
 
       <div className="settings-block me-list-block">
         <button className="setting-row">
-          <ShoppingBag size={20} />
+          <WeIcon name="services" tone="green" />
           服务
           <ChevronRight size={18} />
         </button>
@@ -936,22 +1075,22 @@ function MeTab({
 
       <div className="settings-block me-list-block">
         <button className="setting-row">
-          <Heart size={20} />
+          <WeIcon name="favorite" tone="orange" />
           收藏
           <ChevronRight size={18} />
         </button>
         <button className="setting-row">
-          <Camera size={20} />
+          <WeIcon name="moments" tone="blue" />
           朋友圈
           <ChevronRight size={18} />
         </button>
         <button className="setting-row">
-          <QrCode size={20} />
+          <WeIcon name="card" tone="green" />
           卡包
           <ChevronRight size={18} />
         </button>
         <button className="setting-row">
-          <Smile size={20} />
+          <WeIcon name="sticker" tone="yellow" />
           表情
           <ChevronRight size={18} />
         </button>
@@ -962,7 +1101,7 @@ function MeTab({
           className="setting-row"
           onClick={onOpenSettings}
         >
-          <SlidersHorizontal size={20} />
+          <WeIcon name="settings" tone="gray" />
           设置
           <ChevronRight size={18} />
         </button>
@@ -1701,17 +1840,17 @@ function ChatView({
 }
 
 function BottomTabs({ active, setActive }: { active: TabKey; setActive: (tab: TabKey) => void }) {
-  const tabs: Array<{ key: TabKey; label: string; icon: ReactNode }> = [
-    { key: "chats", label: "微信", icon: <MessageCircle size={22} /> },
-    { key: "contacts", label: "通讯录", icon: <UserRound size={22} /> },
-    { key: "moments", label: "发现", icon: <Compass size={22} /> },
-    { key: "me", label: "我", icon: <CircleUserRound size={22} /> }
+  const tabs: Array<{ key: TabKey; label: string; icon: string }> = [
+    { key: "chats", label: "微信", icon: "tab-chat" },
+    { key: "contacts", label: "通讯录", icon: "tab-contacts" },
+    { key: "moments", label: "发现", icon: "tab-discover" },
+    { key: "me", label: "我", icon: "tab-me" }
   ];
   return (
     <nav className="bottom-tabs">
       {tabs.map((tab) => (
         <button className={active === tab.key ? "active" : ""} key={tab.key} onClick={() => setActive(tab.key)}>
-          {tab.icon}
+          <WeIcon name={tab.icon} />
           <span>{tab.label}</span>
         </button>
       ))}
@@ -1731,6 +1870,7 @@ export default function App() {
   const [isEditingMomentsCover, setIsEditingMomentsCover] = useState(false);
   const [editingBackgroundConversationId, setEditingBackgroundConversationId] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isGeneratingMoment, setIsGeneratingMoment] = useState(false);
   const [isMainActionsOpen, setIsMainActionsOpen] = useState(false);
   const [addFriendRequest, setAddFriendRequest] = useState(0);
@@ -1817,6 +1957,10 @@ export default function App() {
         setIsSettingsOpen(false);
         return;
       }
+      if (isSearchOpen) {
+        setIsSearchOpen(false);
+        return;
+      }
       if (isMainActionsOpen) {
         setIsMainActionsOpen(false);
         return;
@@ -1840,6 +1984,7 @@ export default function App() {
     isEditingMomentsCover,
     isMainActionsOpen,
     isMomentsOpen,
+    isSearchOpen,
     isSettingsOpen,
     isUserProfileOpen
   ]);
@@ -2249,19 +2394,16 @@ export default function App() {
                       : "我"}
               </h1>
               <div className="header-actions">
-                {activeTab === "chats" && (
-                  <button className="icon-button" title="搜索">
+                {activeTab !== "me" && (
+                  <button className="icon-button" onClick={() => setIsSearchOpen(true)} title="搜索">
                     <Search size={20} />
                   </button>
                 )}
-                {activeTab === "chats" && (
-                  <button className="icon-button" onClick={triggerProactive} title="新的聊天">
+                {activeTab !== "me" && (
+                  <button className="icon-button" onClick={() => setIsMainActionsOpen(true)} title="更多功能">
                     <Plus size={20} />
                   </button>
                 )}
-                {activeTab !== "chats" && <button className="icon-button" onClick={() => setIsMainActionsOpen(true)} title="更多">
-                  <MoreHorizontal size={20} />
-                </button>}
               </div>
             </div>
           </header>
@@ -2296,6 +2438,14 @@ export default function App() {
         </div>
       )}
       {isSettingsOpen && <SettingsPanel state={state} setState={setState} onClose={() => setIsSettingsOpen(false)} />}
+      {isSearchOpen && (
+        <GlobalSearchPanel
+          state={state}
+          onClose={() => setIsSearchOpen(false)}
+          onOpenConversation={openConversation}
+          onOpenProfile={openCharacterProfile}
+        />
+      )}
       {activeBackgroundConversation && (
         <ChatBackgroundEditor
           conversation={activeBackgroundConversation}
@@ -2332,20 +2482,28 @@ export default function App() {
         />
       )}
       {isMainActionsOpen && (
-        <ActionSheet
-          title="更多"
+        <MainPlusMenu
           onClose={() => setIsMainActionsOpen(false)}
           actions={[
             {
+              label: "新的聊天",
+              icon: "tab-chat",
+              onClick: () => {
+                triggerProactive();
+                navigateTab("chats");
+              }
+            },
+            {
               label: "添加朋友",
-              icon: <UserPlus size={18} />,
+              icon: "new-friend",
+              tone: "green",
               onClick: () => {
                 setAddFriendRequest((value) => value + 1);
                 navigateTab("contacts");
               }
             },
-            { label: "朋友圈", icon: <Camera size={18} />, onClick: openMomentsPage },
-            { label: "设置", icon: <SlidersHorizontal size={18} />, onClick: () => setIsSettingsOpen(true) }
+            { label: "朋友圈", icon: "moments", tone: "blue", onClick: openMomentsPage },
+            { label: "设置", icon: "settings", tone: "gray", onClick: () => setIsSettingsOpen(true) }
           ]}
         />
       )}
