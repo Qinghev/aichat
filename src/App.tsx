@@ -40,7 +40,7 @@ import {
 } from "lucide-react";
 import { App as CapacitorApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
-import { ChangeEvent, FormEvent, ReactNode, TouchEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, CSSProperties, FormEvent, ReactNode, TouchEvent, useEffect, useMemo, useRef, useState } from "react";
 import { seedCharacters } from "./data/seed";
 import { exportAppState, loadAppState, resetAppState, saveAppState } from "./lib/storage";
 import { formatMomentTime, formatTime, todayKey } from "./lib/time";
@@ -69,6 +69,38 @@ const localProvider = new LocalPersonaProvider();
 
 const iconSize = 20;
 const tabOrder: TabKey[] = ["chats", "contacts", "moments", "me"];
+
+const uiIconAssets = {
+  "tab-chat": new URL("../assets/wechat-ui-icons/outlined/my_audit_comment.svg", import.meta.url).href,
+  "tab-chat-filled": new URL("../assets/wechat-ui-icons/filled/my_audit_comment.svg", import.meta.url).href,
+  "tab-contacts": new URL("../assets/wechat-ui-icons/outlined/my_audit_contacts.svg", import.meta.url).href,
+  "tab-contacts-filled": new URL("../assets/wechat-ui-icons/filled/my_audit_contacts.svg", import.meta.url).href,
+  "tab-discover": new URL("../assets/wechat-ui-icons/outlined/my_audit_discover.svg", import.meta.url).href,
+  "tab-discover-filled": new URL("../assets/wechat-ui-icons/filled/my_audit_discover.svg", import.meta.url).href,
+  "tab-me": new URL("../assets/wechat-ui-icons/outlined/my_audit_me.svg", import.meta.url).href,
+  "tab-me-filled": new URL("../assets/wechat-ui-icons/filled/my_audit_me.svg", import.meta.url).href,
+  "new-friend": new URL("../assets/wechat-ui-icons/filled/my_audit_add_friends.svg", import.meta.url).href,
+  group: new URL("../assets/wechat-ui-icons/filled/my_audit_contacts.svg", import.meta.url).href,
+  official: new URL("../assets/wechat-ui-icons/weixin-homepage/my_audit_official_account.svg", import.meta.url).href,
+  moments: new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_moments_filled.svg", import.meta.url).href,
+  channels: new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_channels_finder.svg", import.meta.url).href,
+  scan: new URL("../assets/wechat-ui-icons/filled/my_audit_scan_qr_code.svg", import.meta.url).href,
+  look: new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_channels_friends_love.svg", import.meta.url).href,
+  "search-grid": new URL("../assets/wechat-ui-icons/filled/my_audit_search.svg", import.meta.url).href,
+  search: new URL("../assets/wechat-ui-icons/outlined/my_audit_search.svg", import.meta.url).href,
+  shop: new URL("../assets/wechat-ui-icons/filled/my_audit_shop.svg", import.meta.url).href,
+  game: new URL("../assets/wechat-ui-icons/weixin-homepage/my_audit_mini_game.png", import.meta.url).href,
+  mini: new URL("../assets/wechat-ui-icons/weixin-homepage/my_audit_mini_program.png", import.meta.url).href,
+  services: new URL("../assets/wechat-ui-icons/filled/my_audit_transfer.svg", import.meta.url).href,
+  favorite: new URL("../assets/wechat-ui-icons/filled/my_audit_like.svg", import.meta.url).href,
+  card: new URL("../assets/wechat-ui-icons/filled/my_audit_transfer.svg", import.meta.url).href,
+  sticker: new URL("../assets/wechat-ui-icons/filled/my_audit_sticker.svg", import.meta.url).href,
+  camera: new URL("../assets/wechat-ui-icons/filled/my_audit_camera.svg", import.meta.url).href,
+  more: new URL("../assets/wechat-ui-icons/filled/my_audit_more.svg", import.meta.url).href,
+  comment: new URL("../assets/wechat-ui-icons/filled/my_audit_comment.svg", import.meta.url).href,
+  like: new URL("../assets/wechat-ui-icons/filled/my_audit_like.svg", import.meta.url).href,
+  share: new URL("../assets/wechat-ui-icons/filled/my_audit_share.svg", import.meta.url).href
+} as const;
 
 const createId = (prefix: string) => `${prefix}_${crypto.randomUUID()}`;
 
@@ -137,14 +169,23 @@ function AiBadge() {
 function WeIcon({
   name,
   tone,
+  active = false,
   className = ""
 }: {
   name: string;
   tone?: string;
+  active?: boolean;
   className?: string;
 }) {
+  const activeName = `${name}-filled` as keyof typeof uiIconAssets;
+  const asset = uiIconAssets[active ? activeName : (name as keyof typeof uiIconAssets)] || uiIconAssets[name as keyof typeof uiIconAssets];
+  const style = asset ? ({ "--we-icon-url": `url("${asset}")` } as CSSProperties) : undefined;
   return (
-    <span className={`wechat-icon wechat-icon-${name} ${tone ? `wechat-icon-${tone}` : ""} ${className}`} aria-hidden="true">
+    <span
+      className={`wechat-icon ${asset ? "wechat-icon-asset" : `wechat-icon-${name}`} ${tone ? `wechat-icon-${tone}` : ""} ${className}`}
+      style={style}
+      aria-hidden="true"
+    >
       <span />
     </span>
   );
@@ -715,7 +756,7 @@ function MomentsTab({
         </button>
         <div className="moments-nav-title">朋友圈</div>
         <button className="icon-button" onClick={() => setIsComposing(true)} onDoubleClick={onGenerate} disabled={generating}>
-          <Camera size={21} />
+          <WeIcon name="camera" />
         </button>
       </header>
       <div
@@ -805,7 +846,7 @@ function MomentCard({
         <div className="moment-actions">
           <span>{formatMomentTime(post.createdAt)}</span>
           <button className="moment-more-button" onClick={() => setShowActions((value) => !value)}>
-            <MoreHorizontal size={16} />
+            <WeIcon name="more" />
           </button>
           {showActions && (
             <div className="moment-action-pop">
@@ -815,7 +856,7 @@ function MomentCard({
                   setShowActions(false);
                 }}
               >
-                <Heart size={15} />
+                <WeIcon name="like" />
                 赞
               </button>
               <button
@@ -824,7 +865,7 @@ function MomentCard({
                   setShowActions(false);
                 }}
               >
-                <MessageSquare size={15} />
+                <WeIcon name="comment" />
                 评论
               </button>
             </div>
@@ -834,7 +875,7 @@ function MomentCard({
           <div className="interaction-panel">
             {likes.length > 0 && (
               <div className="likes-line">
-                <Heart size={13} />
+                <WeIcon name="like" />
                 {likes
                   .map((like) => characters.find((item) => item.id === like.actorCharacterId)?.remarkName)
                   .filter(Boolean)
@@ -1850,7 +1891,7 @@ function BottomTabs({ active, setActive }: { active: TabKey; setActive: (tab: Ta
     <nav className="bottom-tabs">
       {tabs.map((tab) => (
         <button className={active === tab.key ? "active" : ""} key={tab.key} onClick={() => setActive(tab.key)}>
-          <WeIcon name={tab.icon} />
+          <WeIcon name={tab.icon} active={active === tab.key} />
           <span>{tab.label}</span>
         </button>
       ))}
@@ -2396,7 +2437,7 @@ export default function App() {
               <div className="header-actions">
                 {activeTab !== "me" && (
                   <button className="icon-button" onClick={() => setIsSearchOpen(true)} title="搜索">
-                    <Search size={20} />
+                    <WeIcon name="search" />
                   </button>
                 )}
                 {activeTab !== "me" && (

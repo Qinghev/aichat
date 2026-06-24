@@ -1,9 +1,9 @@
 {
-    "versionCode":  12,
-    "versionName":  "2.1",
+    "versionCode":  13,
+    "versionName":  "2.2",
     "apkUrl":  "https://qinghev.github.io/aichat/AIChatSandbox-debug.apk",
-    "sha256":  "E657012FCD6313DF5EAF040824C298052E364113282969F14592C5935A114449",
-    "notes":  "Polish launcher icon, cosmic launch screen, tab icons, and installer handoff",
+    "sha256":  "31B72BEF26144CC15FF876A0F7937CBF26D2F9772D3B6109055014CAF20AA7E1",
+    "notes":  "接入用户自制微信风格界面图标，完善底部导航、发现页、通讯录、我页与朋友圈操作图标。",
     "mandatory":  false,
-    "createdAt":  "2026-06-24T08:13:05Z"
+    "createdAt":  "2026-06-24T10:32:20Z"
 }

@@ -3155,3 +3155,51 @@ button.profile-edit-row {
   height: 28px;
   border-radius: 5px;
 }
+
+.wechat-icon-asset > span {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: currentColor;
+  -webkit-mask: var(--we-icon-url) center / contain no-repeat;
+  mask: var(--we-icon-url) center / contain no-repeat;
+}
+
+.bottom-tabs .wechat-icon-asset {
+  width: 25px;
+  height: 25px;
+}
+
+.utility-row .wechat-icon-asset,
+.discover-row .wechat-icon-asset,
+.setting-row .wechat-icon-asset {
+  display: inline-grid;
+  place-items: center;
+  color: #fff;
+}
+
+.utility-row .wechat-icon-asset > span,
+.discover-row .wechat-icon-asset > span,
+.setting-row .wechat-icon-asset > span,
+.main-plus-menu .wechat-icon-asset > span {
+  inset: 5px;
+  width: auto;
+  height: auto;
+}
+
+.icon-button .wechat-icon-asset {
+  width: 21px;
+  height: 21px;
+}
+
+.moments-nav .wechat-icon-asset,
+.moment-more-button .wechat-icon-asset,
+.moment-action-pop .wechat-icon-asset,
+.likes-line .wechat-icon-asset {
+  width: 17px;
+  height: 17px;
+}
+
+.moments-nav:not(.is-scrolled) .wechat-icon-asset {
+  color: #fff;
+}
