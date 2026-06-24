@@ -11,7 +11,7 @@ const config: CapacitorConfig = {
     }
   },
   android: {
-    backgroundColor: "#f7f7f7"
+    backgroundColor: "#000000"
   }
 };
 

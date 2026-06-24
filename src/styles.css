@@ -3049,3 +3049,109 @@ button.profile-edit-row {
   border-radius: 50%;
   background: transparent;
 }
+
+/* Final app-icon-style polish for the main tab bar. */
+.bottom-tabs {
+  height: calc(55px + env(safe-area-inset-bottom));
+}
+
+.bottom-tabs button {
+  gap: 0;
+  padding-top: 3px;
+}
+
+.bottom-tabs button > span:last-child {
+  margin-top: -1px;
+  line-height: 1.1;
+}
+
+.bottom-tabs .wechat-icon {
+  width: 26px;
+  height: 25px;
+  --icon-bg: #f7f7f7;
+}
+
+.bottom-tabs .wechat-icon-tab-chat > span {
+  left: 8px;
+  top: 4px;
+  width: 14px;
+  height: 11px;
+  border-width: 2px;
+  border-radius: 9px;
+}
+
+.bottom-tabs .wechat-icon-tab-chat > span::before {
+  left: -7px;
+  top: 6px;
+  width: 15px;
+  height: 11px;
+  border-width: 2px;
+  border-radius: 10px;
+}
+
+.bottom-tabs .wechat-icon-tab-chat > span::after {
+  left: -2px;
+  top: 15px;
+  width: 5px;
+  height: 5px;
+  border-width: 0 0 2px 2px;
+}
+
+.bottom-tabs .wechat-icon-tab-contacts > span {
+  left: 8px;
+  top: 4px;
+  width: 8px;
+  height: 8px;
+}
+
+.bottom-tabs .wechat-icon-tab-contacts > span::before {
+  left: -6px;
+  top: 9px;
+  width: 19px;
+  height: 10px;
+  border-radius: 12px 12px 5px 5px;
+}
+
+.bottom-tabs .wechat-icon-tab-contacts > span::after {
+  left: 11px;
+  top: 2px;
+  width: 6px;
+  height: 6px;
+  box-shadow: 0 9px 0 -1px currentColor;
+}
+
+.bottom-tabs .wechat-icon-tab-discover > span {
+  width: 19px;
+  height: 19px;
+  border-width: 2px;
+}
+
+.bottom-tabs .wechat-icon-tab-discover > span::before {
+  left: 5px;
+  top: 3px;
+  width: 8px;
+  height: 12px;
+  clip-path: polygon(50% 0, 88% 100%, 50% 77%, 12% 100%);
+}
+
+.bottom-tabs .wechat-icon-tab-me > span {
+  top: 4px;
+  width: 8px;
+  height: 8px;
+}
+
+.bottom-tabs .wechat-icon-tab-me > span::before {
+  left: -7px;
+  top: 10px;
+  width: 22px;
+  height: 10px;
+  border-radius: 14px 14px 5px 5px;
+}
+
+.discover-row .wechat-icon,
+.utility-row .wechat-icon,
+.setting-row .wechat-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 5px;
+}

@@ -1,6 +1,7 @@
 package com.qinghe.aichatsandbox;
 
 import android.content.Context;
+import android.content.ClipData;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.net.Uri;
@@ -152,11 +153,14 @@ public class InternalUpdaterPlugin extends Plugin {
                     context.getPackageName() + ".fileprovider",
                     apkFile
             );
-            Intent intent = new Intent(Intent.ACTION_VIEW);
+            Intent intent = new Intent(Intent.ACTION_INSTALL_PACKAGE);
             intent.setDataAndType(uri, APK_MIME_TYPE);
+            intent.setClipData(ClipData.newRawUri("update", uri));
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            context.startActivity(intent);
+            intent.putExtra(Intent.EXTRA_RETURN_RESULT, true);
+            intent.putExtra(Intent.EXTRA_NOT_UNKNOWN_SOURCE, true);
+            intent.putExtra(Intent.EXTRA_INSTALLER_PACKAGE_NAME, context.getPackageName());
+            getActivity().startActivity(intent);
 
             JSObject result = new JSObject();
             result.put("path", apkFile.getAbsolutePath());
