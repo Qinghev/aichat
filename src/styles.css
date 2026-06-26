@@ -547,6 +547,16 @@ button {
   line-height: 1.45;
 }
 
+.settings-help {
+  margin: 10px 0 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f6f6f6;
+  color: #696969;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .avatar-preview {
   width: min(100%, 260px);
   height: 220px;
@@ -1639,7 +1649,7 @@ body,
   inset: 0 0 auto;
   z-index: 5;
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0));
-  border-bottom: 1px solid transparent;
+  border-bottom: 0;
   transition:
     background 160ms ease,
     border-color 160ms ease;
@@ -1654,7 +1664,7 @@ body,
   position: sticky;
   top: 0;
   background: #ededed;
-  border-bottom-color: rgba(0, 0, 0, 0.08);
+  border-bottom-color: transparent;
 }
 
 .moments-nav.is-scrolled .icon-button {
@@ -1684,11 +1694,12 @@ body,
 }
 
 .moments-cover {
-  height: 318px;
+  height: 300px;
   display: block;
   position: relative;
   padding: 0;
-  background: #dadada;
+  margin-bottom: 42px;
+  background: #111;
   color: #fff;
 }
 
@@ -1759,23 +1770,36 @@ body,
 
 .moments-cover-photo {
   position: absolute;
-  inset: 0 0 40px;
+  inset: 0;
   background:
     linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.34)),
     url("https://picsum.photos/seed/wechat-moments-cover/900/560") center/cover;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+}
+
+.moments-cover-photo.has-custom-cover {
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
 }
 
 .moments-owner {
   position: absolute;
   right: 17px;
-  bottom: 2px;
+  bottom: -34px;
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 12px;
   color: #fff;
   font-size: 18px;
   font-weight: 600;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+}
+
+.moments-owner > span {
+  transform: translateY(-23px);
 }
 
 .moments-owner .avatar-lg {
@@ -1787,7 +1811,7 @@ body,
 }
 
 .moments-stream {
-  padding-top: 18px;
+  padding-top: 0;
   background: #fff;
 }
 
@@ -1859,9 +1883,11 @@ body,
 
 .moment-actions {
   position: relative;
-  min-height: 28px;
-  margin-top: 3px;
-  gap: 0;
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  margin-top: 6px;
+  gap: 8px;
   color: #8c8c8c;
   font-size: 12px;
 }
@@ -1912,12 +1938,15 @@ body,
 
 .interaction-panel {
   position: relative;
-  margin-top: 3px;
-  padding: 6px 8px;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 2px;
+  padding: 5px 8px;
   border-radius: 0;
   background: #f3f3f5;
   color: #111;
   font-size: 13px;
+  line-height: 1.45;
 }
 
 .interaction-panel::before {
@@ -1933,8 +1962,182 @@ body,
 }
 
 .likes-line {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  flex-wrap: wrap;
   color: #576b95;
   font-weight: 500;
+}
+
+.comment-line {
+  min-width: 0;
+  word-break: break-word;
+}
+
+.likes-line + .comment-line,
+.comment-line + .comment-line {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid #e6e6e8;
+}
+
+.comment-line b {
+  color: #576b95;
+  font-weight: 500;
+}
+
+.wallet-page {
+  position: fixed;
+  inset: 0 auto 0 50%;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  width: min(100vw, 520px);
+  height: 100dvh;
+  transform: translateX(-50%);
+  background: #ededed;
+}
+
+.wallet-topbar {
+  flex: 0 0 auto;
+}
+
+.wallet-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px 12px calc(24px + env(safe-area-inset-bottom));
+  background: #ededed;
+}
+
+.wallet-pay-card {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-height: 112px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #5bbd73;
+}
+
+.wallet-pay-primary {
+  display: grid;
+  place-items: center;
+  gap: 9px;
+  border: 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.18);
+  background: transparent;
+  color: #fff;
+  font-size: 15px;
+}
+
+.wallet-pay-primary:last-child {
+  border-right: 0;
+}
+
+.wallet-pay-primary .wechat-icon {
+  width: 32px;
+  height: 32px;
+}
+
+.wallet-section {
+  margin-top: 10px;
+  background: #fff;
+}
+
+.wallet-section h3 {
+  height: 42px;
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 0 16px;
+  border-bottom: 1px solid #ededed;
+  color: #777;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.wallet-service-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.wallet-service-grid button {
+  min-height: 92px;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 6px;
+  border: 0;
+  border-right: 1px solid #ededed;
+  border-bottom: 1px solid #ededed;
+  background: #fff;
+  color: #111;
+  font-size: 14px;
+}
+
+.wallet-service-grid button:nth-child(3n) {
+  border-right: 0;
+}
+
+.wallet-service-grid small {
+  max-width: 100%;
+  color: #8a8a8a;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wallet-service-grid .wechat-icon {
+  color: #07c160;
+}
+
+.wallet-service-grid .wechat-icon-blue {
+  color: #576b95;
+}
+
+.wallet-service-grid .wechat-icon-orange,
+.wallet-service-grid .wechat-icon-yellow {
+  color: #d59a2d;
+}
+
+.wallet-service-grid .wechat-icon-red {
+  color: #d86b43;
+}
+
+.wallet-service-grid .wechat-icon-asset > span {
+  inset: 2px;
+}
+
+.discover-row .wechat-icon {
+  color: #576b95;
+  background: transparent;
+  border-radius: 0;
+}
+
+.discover-row .wechat-icon-blue {
+  color: #4a7fc1;
+}
+
+.discover-row .wechat-icon-orange,
+.discover-row .wechat-icon-yellow {
+  color: #d69b32;
+}
+
+.discover-row .wechat-icon-green,
+.discover-row .wechat-icon-teal {
+  color: #07a35d;
+}
+
+.discover-row .wechat-icon-asset > span {
+  inset: 2px;
+}
+
+.discover-row .wechat-icon-red,
+.discover-row .wechat-icon-purple {
+  color: #576b95;
 }
 
 .comment-line {
@@ -3306,10 +3509,11 @@ button.profile-edit-row {
 .red-packet-card {
   width: min(270px, 72vw);
   min-height: 82px;
+  position: relative;
   border: 0;
-  border-radius: 6px;
+  border-radius: 5px;
   color: #fff;
-  background: linear-gradient(135deg, #f35c35, #d9432c);
+  background: #f2a13a;
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr) 36px;
   align-items: center;
@@ -3317,6 +3521,17 @@ button.profile-edit-row {
   padding: 12px;
   text-align: left;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.red-packet-card::after {
+  content: "微信红包";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 8px;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 11px;
+  pointer-events: none;
 }
 
 .red-packet-card:disabled {
@@ -3329,9 +3544,9 @@ button.profile-edit-row {
   place-items: center;
   width: 38px;
   height: 38px;
-  border-radius: 8px;
-  background: #ffd47a;
-  color: #b44312;
+  border-radius: 6px;
+  background: #ffe0a3;
+  color: #bd7324;
   font-size: 22px;
   font-weight: 700;
 }
@@ -3339,7 +3554,8 @@ button.profile-edit-row {
 .red-packet-main {
   min-width: 0;
   display: grid;
-  gap: 6px;
+  gap: 5px;
+  padding-bottom: 12px;
 }
 
 .red-packet-main b {
@@ -3351,7 +3567,7 @@ button.profile-edit-row {
 }
 
 .red-packet-main small {
-  color: rgba(255, 255, 255, 0.78);
+  color: rgba(255, 255, 255, 0.86);
   font-size: 12px;
 }
 
@@ -3361,8 +3577,8 @@ button.profile-edit-row {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: #ffd47a;
-  color: #b44312;
+  background: #ffe0a3;
+  color: #bd7324;
   font-weight: 700;
 }
 
@@ -3405,7 +3621,7 @@ button.profile-edit-row {
   min-height: 318px;
   align-content: start;
   padding: 14px 16px calc(18px + env(safe-area-inset-bottom));
-  background: #f3f3f3;
+  background: #f5eee8;
 }
 
 .red-packet-panel-title {
@@ -3426,8 +3642,8 @@ button.profile-edit-row {
 
 .red-packet-field {
   height: 50px;
-  border-radius: 7px;
-  background: #fff;
+  border-radius: 4px;
+  background: #fffaf3;
   display: grid;
   grid-template-columns: 82px minmax(0, 1fr);
   align-items: center;
@@ -3473,9 +3689,9 @@ button.profile-edit-row {
   height: 44px;
   justify-self: center;
   border: 0;
-  border-radius: 6px;
+  border-radius: 5px;
   color: #fff;
-  background: #e65332;
+  background: #d84f33;
   font-weight: 600;
 }
 
@@ -3517,6 +3733,51 @@ button.profile-edit-row {
 .plus-tool-button {
   border: 1.5px solid #222;
   border-radius: 50%;
+}
+
+.discover-row .wechat-icon,
+.discover-row .wechat-icon-asset {
+  background: transparent;
+  color: #576b95;
+  border-radius: 0;
+}
+
+.discover-row .wechat-icon-blue {
+  color: #4a7fc1;
+}
+
+.discover-row .wechat-icon-orange,
+.discover-row .wechat-icon-yellow {
+  color: #d69b32;
+}
+
+.discover-row .wechat-icon-green,
+.discover-row .wechat-icon-teal {
+  color: #07a35d;
+}
+
+.discover-row .wechat-icon-asset > span {
+  inset: 2px;
+}
+
+.wallet-pay-primary .wechat-icon,
+.wallet-pay-primary .wechat-icon-asset {
+  background: transparent;
+  color: #fff;
+}
+
+.wallet-pay-primary .wechat-icon-asset > span {
+  inset: 0;
+}
+
+.wallet-service-grid .wechat-icon,
+.wallet-service-grid .wechat-icon-asset {
+  background: transparent;
+  border-radius: 0;
+}
+
+.wallet-service-grid .wechat-icon-asset > span {
+  inset: 2px;
 }
 
 @media (max-width: 380px) {

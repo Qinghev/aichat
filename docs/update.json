@@ -1,9 +1,9 @@
 {
-    "versionCode":  15,
-    "versionName":  "2.4",
+    "versionCode":  16,
+    "versionName":  "2.5",
     "apkUrl":  "https://qinghev.github.io/aichat/AIChatSandbox-debug.apk",
-    "sha256":  "BD7C83B525A1E3FAECEB61FA7BA0FA877BF25E0EF4E56F61278001D16CB4AAEB",
-    "notes":  "支持分别设置云雾文字模型和生图模型，图片请求优先生图接口；新增可恢复的默认全局 Skill 模板。",
+    "sha256":  "50630C88E4197114D1E8C0CF3DC838FEE7EF9F6511CE3AB461CEC8967392F054",
+    "notes":  "简化设置页，修正朋友圈封面与赞评布局，优化发现页、钱包和红包样式。",
     "mandatory":  false,
-    "createdAt":  "2026-06-26T07:07:46Z"
+    "createdAt":  "2026-06-26T07:30:51Z"
 }

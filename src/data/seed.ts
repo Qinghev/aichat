@@ -469,7 +469,7 @@ export const makeInitialState = (): AppState => {
       apiImageModel: "grok-imagine-image-quality",
       apiImageSize: "1k",
       globalSkillPrompt: defaultGlobalSkillPrompt,
-      globalSkillIds: ["memory_callback", "playful_combo"],
+      globalSkillIds: [],
       chatBackgroundUrl: "",
       momentsCoverUrl: "",
       textBackupEndpoint: "",

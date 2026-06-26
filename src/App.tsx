@@ -61,7 +61,7 @@ import {
   shouldAttachImageFromText,
   stickerPack
 } from "./lib/media";
-import { downloadTextArchive, mergeTextArchive, sendTextArchive, type TextArchive } from "./lib/textArchive";
+import { downloadTextArchive, mergeTextArchive, type TextArchive } from "./lib/textArchive";
 import { checkForInternalUpdate } from "./lib/updater";
 import { formatMoney, normalizeWallet, pickRedPacketAmount } from "./lib/wallet";
 import { hasSkill, mergeSkillIds, skillCombos, skillPresets, toggleSkillId } from "./lib/skills";
@@ -87,6 +87,7 @@ const uiIconAssets = {
   official: new URL("../assets/wechat-ui-icons/weixin-homepage/my_audit_official_account.svg", import.meta.url).href,
   moments: new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_moments_filled.svg", import.meta.url).href,
   channels: new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_channels_finder.svg", import.meta.url).href,
+  live: new URL("../assets/wechat-ui-icons/filled/my_audit_channels_tv.svg", import.meta.url).href,
   scan: new URL("../assets/wechat-ui-icons/filled/my_audit_scan_qr_code.svg", import.meta.url).href,
   look: new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_channels_friends_love.svg", import.meta.url).href,
   "search-grid": new URL("../assets/wechat-ui-icons/filled/my_audit_search.svg", import.meta.url).href,
@@ -746,11 +747,10 @@ function DiscoverTab({ onOpenMoments }: { onOpenMoments: () => void }) {
   const rows = [
     { label: "朋友圈", icon: "moments", tone: "blue", onClick: onOpenMoments },
     { label: "视频号", icon: "channels", tone: "orange" },
+    { label: "直播", icon: "live", tone: "orange" },
     { label: "扫一扫", icon: "scan", tone: "green", gap: true },
     { label: "看一看", icon: "look", tone: "yellow" },
     { label: "搜一搜", icon: "search-grid", tone: "teal" },
-    { label: "购物", icon: "shop", tone: "red", gap: true },
-    { label: "游戏", icon: "game", tone: "purple" },
     { label: "小程序", icon: "mini", tone: "green", gap: true }
   ];
 
@@ -1141,10 +1141,12 @@ function CharacterProfilePage({
 function MeTab({
   state,
   onOpenProfile,
+  onOpenWallet,
   onOpenSettings
 }: {
   state: AppState;
   onOpenProfile: () => void;
+  onOpenWallet: () => void;
   onOpenSettings: () => void;
 }) {
   return (
@@ -1162,10 +1164,9 @@ function MeTab({
       </button>
 
       <div className="settings-block me-list-block">
-        <button className="setting-row">
+        <button className="setting-row" type="button" onClick={onOpenWallet}>
           <WeIcon name="services" tone="green" />
           服务
-          <span className="setting-value">钱包 {formatMoney(state.wallet.balance)}</span>
           <ChevronRight size={18} />
         </button>
       </div>
@@ -1202,6 +1203,78 @@ function MeTab({
           设置
           <ChevronRight size={18} />
         </button>
+      </div>
+    </section>
+  );
+}
+
+function WalletPanel({
+  wallet,
+  onBack
+}: {
+  wallet: AppState["wallet"];
+  onBack: () => void;
+}) {
+  const payItems = [
+    { label: "收付款", icon: "services", tone: "green" },
+    { label: "零钱", icon: "card", tone: "green", value: formatMoney(wallet.balance) },
+    { label: "银行卡", icon: "card", tone: "blue" },
+    { label: "账单", icon: "favorite", tone: "orange" }
+  ];
+  const lifeItems = [
+    { label: "红包", icon: "sticker", tone: "red", value: `已发 ${formatMoney(wallet.totalSent)}` },
+    { label: "转账", icon: "services", tone: "green", value: `已收 ${formatMoney(wallet.totalReceived)}` },
+    { label: "每周到账", icon: "favorite", tone: "yellow", value: formatMoney(wallet.weeklyAllowance) }
+  ];
+
+  return (
+    <section className="wallet-page">
+      <header className="chat-header wallet-topbar">
+        <button className="icon-button" onClick={onBack}>
+          <ChevronLeft size={22} />
+        </button>
+        <div className="chat-title">服务</div>
+        <button className="icon-button" type="button" title="更多">
+          <MoreHorizontal size={22} />
+        </button>
+      </header>
+      <div className="wallet-body">
+        <section className="wallet-pay-card">
+          <button type="button" className="wallet-pay-primary">
+            <WeIcon name="services" />
+            <span>收付款</span>
+          </button>
+          <button type="button" className="wallet-pay-primary">
+            <WeIcon name="card" />
+            <span>钱包</span>
+          </button>
+        </section>
+
+        <section className="wallet-section">
+          <h3>支付服务</h3>
+          <div className="wallet-service-grid">
+            {payItems.map((item) => (
+              <button type="button" key={item.label}>
+                <WeIcon name={item.icon} tone={item.tone} />
+                <span>{item.label}</span>
+                {item.value && <small>{item.value}</small>}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="wallet-section">
+          <h3>生活服务</h3>
+          <div className="wallet-service-grid">
+            {lifeItems.map((item) => (
+              <button type="button" key={item.label}>
+                <WeIcon name={item.icon} tone={item.tone} />
+                <span>{item.label}</span>
+                {item.value && <small>{item.value}</small>}
+              </button>
+            ))}
+          </div>
+        </section>
       </div>
     </section>
   );
@@ -1324,28 +1397,10 @@ function SettingsPanel({
     }
   };
 
-  const sendBackup = async () => {
-    setStatus("正在发送到电脑...");
-    try {
-      await sendTextArchive(state, state.settings.textBackupEndpoint);
-      setStatus("已发送到电脑。");
-    } catch {
-      setStatus("发送失败，请确认电脑接收脚本正在运行，且手机和电脑在同一网络。");
-    }
-  };
-
   const checkUpdateNow = async () => {
     setStatus("正在检查更新...");
     await checkForInternalUpdate(true);
     setStatus("更新检查已完成。");
-  };
-
-  const handleMomentsCoverFile = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    const media = await fileToMediaAsset(file, "moments-background");
-    updateSetting("momentsCoverUrl", media.url);
-    event.target.value = "";
   };
 
   return (
@@ -1387,6 +1442,9 @@ function SettingsPanel({
             >
               本地模拟
             </button>
+          </div>
+          <div className="settings-help">
+            远程模型会使用你填写的云雾 API 和模型，聊天与生图都走真实接口；本地模拟只用手机里的固定模板回复，适合没填 API 时测试界面。
           </div>
           <label>
             <span>API Key</span>
@@ -1453,16 +1511,6 @@ function SettingsPanel({
               <option value="1024x1792" />
             </datalist>
           </label>
-          <div className="settings-skill-block">
-            <div className="settings-inline-title">
-              <span>全局 Skills</span>
-              <small>这里的设置会影响所有联系人</small>
-            </div>
-            <SkillSelector
-              value={state.settings.globalSkillIds || []}
-              onChange={(globalSkillIds) => updateSetting("globalSkillIds", globalSkillIds)}
-            />
-          </div>
           <label className="settings-textarea-label">
             <span>全局 Skill</span>
             <textarea
@@ -1475,39 +1523,6 @@ function SettingsPanel({
           <button type="button" className="secondary-button" onClick={() => updateSetting("globalSkillPrompt", defaultGlobalSkillPrompt)}>
             使用默认全局 Skill 模板
           </button>
-        </section>
-
-        <section className="settings-section">
-          <h3>朋友圈背景</h3>
-          <div className="chat-background-preview moments-background-preview">
-            {state.settings.momentsCoverUrl ? (
-              <img src={state.settings.momentsCoverUrl} alt="" />
-            ) : (
-              <span>默认背景</span>
-            )}
-          </div>
-          <label className="file-row">
-            <Upload size={18} />
-            从手机相册选择
-            <input type="file" accept="image/*" onChange={handleMomentsCoverFile} />
-          </label>
-          <label>
-            <span>图片地址</span>
-            <input
-              value={state.settings.momentsCoverUrl}
-              onChange={(event) => updateSetting("momentsCoverUrl", event.target.value)}
-              placeholder="https://..."
-            />
-          </label>
-          <ImageSearchPanel
-            initialQuery="朋友圈 封面 风景"
-            onPick={(asset) => updateSetting("momentsCoverUrl", asset.url)}
-          />
-          {state.settings.momentsCoverUrl && (
-            <button type="button" className="secondary-button" onClick={() => updateSetting("momentsCoverUrl", "")}>
-              使用默认背景
-            </button>
-          )}
         </section>
 
         <section className="settings-section">
@@ -1527,25 +1542,6 @@ function SettingsPanel({
             导入文字档案
             <input type="file" accept="application/json,.json" onChange={importTextArchive} />
           </label>
-          <label>
-            <span>电脑接收地址</span>
-            <input
-              value={state.settings.textBackupEndpoint}
-              onChange={(event) => updateSetting("textBackupEndpoint", event.target.value)}
-              placeholder="http://电脑IP:8787/upload"
-            />
-          </label>
-          <label className="settings-checkbox-row">
-            <input
-              type="checkbox"
-              checked={state.settings.autoTextBackup}
-              onChange={(event) => updateSetting("autoTextBackup", event.target.checked)}
-            />
-            <span>有新文字聊天时自动发送到电脑</span>
-          </label>
-          <button type="button" className="primary-button" onClick={sendBackup}>
-            发送到电脑
-          </button>
           {status && <div className="settings-status">{status}</div>}
         </section>
 
@@ -1878,7 +1874,7 @@ function ChatView({
         recentMessages: messages.slice(-12),
         memorySummary,
         globalSkillPrompt: state.settings.globalSkillPrompt,
-        globalSkillIds: state.settings.globalSkillIds
+        globalSkillIds: []
       })
       .catch(async () => {
         const fallback = await localProvider.chat({
@@ -1887,7 +1883,7 @@ function ChatView({
           recentMessages: messages.slice(-12),
           memorySummary,
           globalSkillPrompt: state.settings.globalSkillPrompt,
-          globalSkillIds: state.settings.globalSkillIds
+          globalSkillIds: []
         });
         return { ...fallback, modelName: "local-fallback-v1" };
       });
@@ -1908,8 +1904,8 @@ function ChatView({
       const outgoing: Message[] = [aiMessage];
       const redPacketCue = /红包|钱|奖励|打赏|恭喜|生日|开心|加油|辛苦|难过|安慰|哄我|鼓励/.test(`${content} ${result.content}`);
       const redPacketEnabled =
-        hasSkill(character, state.settings.globalSkillIds || [], "red_packet") ||
-        hasSkill(character, state.settings.globalSkillIds || [], "playful_combo");
+        hasSkill(character, [], "red_packet") ||
+        hasSkill(character, [], "playful_combo");
       if (result.riskLevel !== "L3" && result.riskLevel !== "L4" && (redPacketCue || (redPacketEnabled && /加油|辛苦|难过|开心|恭喜|生日/.test(content)))) {
         const amount = pickRedPacketAmount(`${character.id}${content}${outgoing.length}`);
         outgoing.push({
@@ -2267,11 +2263,11 @@ export default function App() {
   const [isEditingMomentsCover, setIsEditingMomentsCover] = useState(false);
   const [editingBackgroundConversationId, setEditingBackgroundConversationId] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isWalletOpen, setIsWalletOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isGeneratingMoment, setIsGeneratingMoment] = useState(false);
   const [isMainActionsOpen, setIsMainActionsOpen] = useState(false);
   const [addFriendRequest, setAddFriendRequest] = useState(0);
-  const lastAutoBackupMessageCount = useRef(0);
   const historyReady = useRef(false);
   const mainSwipeStart = useRef<{ x: number; y: number } | null>(null);
 
@@ -2288,19 +2284,6 @@ export default function App() {
     setState((prev) => ({ ...prev, user: { ...prev.user, lastActiveAt: new Date().toISOString() } }));
     void checkForInternalUpdate();
   }, []);
-
-  useEffect(() => {
-    const textMessageCount = state.messages.filter((message) => message.contentType === "text").length;
-    if (!state.settings.autoTextBackup || !state.settings.textBackupEndpoint || textMessageCount === lastAutoBackupMessageCount.current) {
-      lastAutoBackupMessageCount.current = textMessageCount;
-      return;
-    }
-    lastAutoBackupMessageCount.current = textMessageCount;
-    const timer = window.setTimeout(() => {
-      void sendTextArchive(state, state.settings.textBackupEndpoint).catch(() => undefined);
-    }, 1800);
-    return () => window.clearTimeout(timer);
-  }, [state, state.messages.length, state.settings.autoTextBackup, state.settings.textBackupEndpoint]);
 
   useEffect(() => {
     if (!historyReady.current) {
@@ -2354,6 +2337,10 @@ export default function App() {
         setIsSettingsOpen(false);
         return;
       }
+      if (isWalletOpen) {
+        setIsWalletOpen(false);
+        return;
+      }
       if (isSearchOpen) {
         setIsSearchOpen(false);
         return;
@@ -2383,6 +2370,7 @@ export default function App() {
     isMomentsOpen,
     isSearchOpen,
     isSettingsOpen,
+    isWalletOpen,
     isUserProfileOpen
   ]);
 
@@ -2828,6 +2816,7 @@ export default function App() {
                 <MeTab
                   state={state}
                   onOpenProfile={openUserProfile}
+                  onOpenWallet={() => setIsWalletOpen(true)}
                   onOpenSettings={() => setIsSettingsOpen(true)}
                 />
               </div>
@@ -2836,6 +2825,7 @@ export default function App() {
           <BottomTabs active={activeTab} setActive={navigateTab} />
         </div>
       )}
+      {isWalletOpen && <WalletPanel wallet={state.wallet} onBack={() => setIsWalletOpen(false)} />}
       {isSettingsOpen && <SettingsPanel state={state} setState={setState} onClose={() => setIsSettingsOpen(false)} />}
       {isSearchOpen && (
         <GlobalSearchPanel
