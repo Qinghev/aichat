@@ -1,4 +1,5 @@
 import type { AppState, Character, Conversation, Message, MomentPost } from "../types";
+import { defaultGlobalSkillPrompt } from "../lib/globalSkillTemplate";
 
 const now = new Date("2026-06-17T14:55:00+08:00").toISOString();
 
@@ -462,9 +463,12 @@ export const makeInitialState = (): AppState => {
       aiDisclosureAlwaysOn: true,
       quietHours: ["23:00", "08:00"],
       apiKey: "",
-      apiBaseUrl: "https://api.x.ai/v1",
+      apiBaseUrl: "https://yunwu.ai/v1",
       apiModel: "grok-4.3",
-      globalSkillPrompt: "",
+      apiTextModel: "grok-4.3",
+      apiImageModel: "grok-imagine-image-quality",
+      apiImageSize: "1k",
+      globalSkillPrompt: defaultGlobalSkillPrompt,
       globalSkillIds: ["memory_callback", "playful_combo"],
       chatBackgroundUrl: "",
       momentsCoverUrl: "",

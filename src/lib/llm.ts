@@ -36,7 +36,7 @@ type ChatCompletionMessage = {
 const trimTrailingSlash = (value: string) => value.replace(/\/+$/, "");
 
 const chatCompletionsUrl = (baseUrl?: string) => {
-  const base = trimTrailingSlash(baseUrl || "https://api.x.ai/v1");
+  const base = trimTrailingSlash(baseUrl || "https://yunwu.ai/v1");
   return base.endsWith("/chat/completions") ? base : `${base}/chat/completions`;
 };
 
@@ -183,12 +183,14 @@ export class OpenAICompatibleProvider implements LlmProvider {
   }
 }
 
-export const makeConfiguredProvider = (settings: Pick<Settings, "apiKey" | "apiBaseUrl" | "apiModel">) =>
+export const makeConfiguredProvider = (
+  settings: Pick<Settings, "apiKey" | "apiBaseUrl" | "apiModel" | "apiTextModel">
+) =>
   new OpenAICompatibleProvider({
     apiKey: settings.apiKey,
-    baseUrl: settings.apiBaseUrl || "https://api.x.ai/v1",
-    model: settings.apiModel || "grok-4.3"
+    baseUrl: settings.apiBaseUrl || "https://yunwu.ai/v1",
+    model: settings.apiTextModel || settings.apiModel || "grok-4.3"
   });
 
-export const hasConfiguredProvider = (settings: Pick<Settings, "apiKey" | "apiBaseUrl" | "apiModel">) =>
-  Boolean(settings.apiKey && settings.apiBaseUrl && settings.apiModel);
+export const hasConfiguredProvider = (settings: Pick<Settings, "apiKey" | "apiBaseUrl" | "apiModel" | "apiTextModel">) =>
+  Boolean(settings.apiKey && settings.apiBaseUrl && (settings.apiTextModel || settings.apiModel));

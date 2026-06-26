@@ -175,6 +175,9 @@ export interface Settings {
   apiKey: string;
   apiBaseUrl: string;
   apiModel: string;
+  apiTextModel: string;
+  apiImageModel: string;
+  apiImageSize: string;
   globalSkillPrompt: string;
   globalSkillIds: SkillId[];
   chatBackgroundUrl: string;

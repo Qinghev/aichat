@@ -51,6 +51,7 @@ import {
   updateMemoryFromMessage
 } from "./lib/localAi";
 import { hasConfiguredProvider, makeConfiguredProvider } from "./lib/llm";
+import { generateImageAsset } from "./lib/imageGeneration";
 import {
   cacheImageAsset,
   fileToMediaAsset,
@@ -64,6 +65,7 @@ import { downloadTextArchive, mergeTextArchive, sendTextArchive, type TextArchiv
 import { checkForInternalUpdate } from "./lib/updater";
 import { formatMoney, normalizeWallet, pickRedPacketAmount } from "./lib/wallet";
 import { hasSkill, mergeSkillIds, skillCombos, skillPresets, toggleSkillId } from "./lib/skills";
+import { defaultGlobalSkillPrompt } from "./lib/globalSkillTemplate";
 import type { AppState, Character, Conversation, MediaAsset, Message, MomentPost, SkillId, TabKey, UserProfile } from "./types";
 
 const localProvider = new LocalPersonaProvider();
@@ -1400,24 +1402,55 @@ function SettingsPanel({
             <input
               value={state.settings.apiBaseUrl}
               onChange={(event) => updateSetting("apiBaseUrl", event.target.value)}
-              placeholder="https://api.x.ai/v1"
+              placeholder="https://yunwu.ai/v1"
             />
           </label>
           <label>
-            <span>模型</span>
+            <span>文字模型</span>
             <input
-              list="api-model-options"
-              value={state.settings.apiModel}
-              onChange={(event) => updateSetting("apiModel", event.target.value)}
-              placeholder="grok-4.3 / 中转站模型 ID"
+              list="api-text-model-options"
+              value={state.settings.apiTextModel || state.settings.apiModel}
+              onChange={(event) => {
+                updateSetting("apiTextModel", event.target.value);
+                updateSetting("apiModel", event.target.value);
+              }}
+              placeholder="grok-4.3"
             />
-            <datalist id="api-model-options">
+            <datalist id="api-text-model-options">
               <option value="grok-4.3" />
               <option value="grok-4" />
               <option value="grok-3" />
-              <option value="gpt-4.1" />
-              <option value="claude-sonnet-4" />
+              <option value="grok-3-mini" />
               <option value="deepseek-chat" />
+            </datalist>
+          </label>
+          <label>
+            <span>生图模型</span>
+            <input
+              list="api-image-model-options"
+              value={state.settings.apiImageModel}
+              onChange={(event) => updateSetting("apiImageModel", event.target.value)}
+              placeholder="grok-imagine-image-quality"
+            />
+            <datalist id="api-image-model-options">
+              <option value="grok-imagine-image-quality" />
+              <option value="grok-2-image" />
+            </datalist>
+          </label>
+          <label>
+            <span>图片规格</span>
+            <input
+              list="api-image-size-options"
+              value={state.settings.apiImageSize}
+              onChange={(event) => updateSetting("apiImageSize", event.target.value)}
+              placeholder="1k"
+            />
+            <datalist id="api-image-size-options">
+              <option value="1k" />
+              <option value="2k" />
+              <option value="1024x1024" />
+              <option value="1792x1024" />
+              <option value="1024x1792" />
             </datalist>
           </label>
           <div className="settings-skill-block">
@@ -1436,9 +1469,12 @@ function SettingsPanel({
               value={state.settings.globalSkillPrompt}
               onChange={(event) => updateSetting("globalSkillPrompt", event.target.value)}
               placeholder="所有联系人共同遵守的说话方式、能力和边界"
-              rows={5}
+              rows={9}
             />
           </label>
+          <button type="button" className="secondary-button" onClick={() => updateSetting("globalSkillPrompt", defaultGlobalSkillPrompt)}>
+            使用默认全局 Skill 模板
+          </button>
         </section>
 
         <section className="settings-section">
@@ -1896,21 +1932,23 @@ function ChatView({
       }
 
       if (shouldAttachImageFromText(content) && result.riskLevel !== "L3" && result.riskLevel !== "L4") {
-        const images = await searchImages(imageQueryFromText(content, character), 8).catch(() => []);
-        if (images[0]) {
-          const asset = await cacheImageAsset(images[0]);
+        const imagePrompt = imageQueryFromText(content, character);
+        const generated = await generateImageAsset(state.settings, imagePrompt).catch(() => null);
+        const images = generated ? [] : await searchImages(imagePrompt, 8).catch(() => []);
+        const asset = generated || (images[0] ? await cacheImageAsset(images[0]) : undefined);
+        if (asset) {
           outgoing.push({
             id: createId("msg"),
             conversationId: conversation.id,
             senderType: "ai",
             senderCharacterId: character.id,
             contentType: "image",
-            content: asset.title || "图片",
+            content: asset.title || imagePrompt || "图片",
             media: asset,
             aiGenerated: true,
             riskLevel: "L0",
             createdAt: new Date().toISOString(),
-            modelName: "image-search"
+            modelName: generated ? state.settings.apiImageModel || "image-generation" : "image-search"
           });
         }
       }
@@ -2600,8 +2638,10 @@ export default function App() {
     const available = state.characters.filter((character) => character.enabled && character.momentsPolicy.enabled);
     const character = available[state.moments.length % available.length] ?? state.characters[0];
     const post = generateMoment(state, character);
-    const images = await searchImages(momentImageQuery(post.content, character), 8).catch(() => []);
-    const image = images[0] ? await cacheImageAsset(images[0]) : undefined;
+    const imagePrompt = momentImageQuery(post.content, character);
+    const generated = await generateImageAsset(state.settings, imagePrompt).catch(() => null);
+    const images = generated ? [] : await searchImages(imagePrompt, 8).catch(() => []);
+    const image = generated || (images[0] ? await cacheImageAsset(images[0]) : undefined);
     setState((prev) => ({
       ...prev,
       moments: [{ ...post, media: image ? [image] : post.media }, ...prev.moments]
