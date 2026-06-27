@@ -1,9 +1,9 @@
 {
-    "versionCode":  16,
-    "versionName":  "2.5",
+    "versionCode":  17,
+    "versionName":  "2.6",
     "apkUrl":  "https://qinghev.github.io/aichat/AIChatSandbox-debug.apk",
-    "sha256":  "50630C88E4197114D1E8C0CF3DC838FEE7EF9F6511CE3AB461CEC8967392F054",
-    "notes":  "简化设置页，修正朋友圈封面与赞评布局，优化发现页、钱包和红包样式。",
+    "sha256":  "68702D217A268B1F7148E91E787AFDA13B632126C5A3C95EFBB7FCF1DAFC692B",
+    "notes":  "增强聊天个性化与熟人感，修复等待中退出后回复丢失，新增消息长按菜单、顶部正在输入提示和朋友圈自动发布。",
     "mandatory":  false,
-    "createdAt":  "2026-06-26T07:30:51Z"
+    "createdAt":  "2026-06-27T15:39:01Z"
 }

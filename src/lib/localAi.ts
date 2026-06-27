@@ -31,11 +31,19 @@ const riskReply = (riskLevel: RiskLevel) => {
 };
 
 const roleOpeners: Record<string, string[]> = {
-  c_linxia: ["我明白你的意思。", "先别急。", "听起来这件事确实压着你了。"],
-  c_zhouyu: ["先拆一下。", "我先把变量列出来。", "这件事可以分两层看。"],
-  c_atang: ["行，先别自我攻击。", "这事没你想得那么玄。", "我懂，确实烦。"],
-  c_shenyan: ["我需要看到依据。", "这个问题先回到目标。", "如果这是一次演练，我会这样追问。"],
-  c_muxi: ["可以慢慢说。", "我在听。", "你可以先把最重的那一块放下来。"]
+  c_linxia: ["嗯，我在。", "先别急。", "我懂你这个感觉。"],
+  c_zhouyu: ["我看到了。", "先别急着定性。", "这事可以拆一下。"],
+  c_atang: ["行，我懂。", "啧，这事确实烦。", "先别骂自己。"],
+  c_shenyan: ["说重点。", "我需要看到依据。", "这个问题先回到目标。"],
+  c_muxi: ["可以慢慢说。", "我在听。", "嗯，先放这儿。"]
+};
+
+const casualByRole: Record<string, string[]> = {
+  c_linxia: ["刚好看到消息。你今天状态怎么样？", "我在呢，不用组织得很完整。", "这句我先接住了。"],
+  c_zhouyu: ["收到。你想先聊结论，还是先把背景丢过来？", "我在，先给我一点上下文。", "可以，先从最卡的地方说。"],
+  c_atang: ["来了。今天谁又惹你了？", "你这语气，我感觉有瓜。", "说吧，我先不笑。"],
+  c_shenyan: ["可以，给我背景。", "先讲目标。", "如果要演练，直接进入场景。"],
+  c_muxi: ["我在。你可以慢慢打。", "先不用解释太多。", "嗯，今晚可以轻一点说。"]
 };
 
 const adviceByRole: Record<string, string[]> = {
@@ -68,6 +76,9 @@ const detectTopic = (text: string) => {
   return "general";
 };
 
+const isCasualMessage = (text: string) =>
+  text.length <= 18 && !/怎么办|为什么|怎么做|帮我|分析|复盘|难过|焦虑|崩溃|分手|老板|工作/.test(text);
+
 export class LocalPersonaProvider implements LlmProvider {
   async moderate(input: string): Promise<LlmModerationResult> {
     const riskLevel = classifyRisk(input);
@@ -87,15 +98,28 @@ export class LocalPersonaProvider implements LlmProvider {
 
     const topic = detectTopic(input.userMessage);
     const opener = pick(roleOpeners[input.character.id] ?? input.character.speechStyle.catchphrases, input.userMessage);
+    if (topic === "general" && isCasualMessage(input.userMessage)) {
+      return {
+        content: compact([
+          opener,
+          " ",
+          pick(casualByRole[input.character.id] ?? casualByRole.c_linxia, `${input.character.id}${input.userMessage}`),
+          input.character.speechStyle.emojiFrequency === "low" && input.character.personality.humor > 6 ? " 🙂" : ""
+        ]),
+        modelName: "local-persona-v2",
+        riskLevel
+      };
+    }
+
     const advice = pick(adviceByRole[input.character.id] ?? adviceByRole.c_linxia, `${input.userMessage}${topic}`);
-    const memoryHint = input.memorySummary ? "我也记得你更适合先被理解，再一起拆事情。" : "";
+    const memoryHint = input.memorySummary ? pick(["这点我记下了。", "这和你前面说过的有点连着。", ""], input.memorySummary) : "";
     const topicHint =
       topic === "work"
-        ? "如果这是职场场景，先别急着证明自己错没错，先确认你要争取的是资源、边界还是评价。"
+        ? "先别急着证明自己错没错，先看你要争取的是资源、边界还是评价。"
         : topic === "relationship"
-          ? "关系里的冷淡很容易被脑内补全成最坏版本，我们先抓真实证据。"
+          ? "关系里的冷淡很容易被脑内补全成最坏版本，先抓真实证据。"
           : topic === "emotion"
-            ? "情绪先被命名，才比较容易被处理。"
+            ? "你现在先不用把自己讲清楚，情绪能被叫出名字就已经好一点。"
             : "";
     const globalSkillIds = input.globalSkillIds || [];
     const skillHint = hasSkill(input.character, globalSkillIds, "logic_canvas")

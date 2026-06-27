@@ -73,6 +73,14 @@ const localProvider = new LocalPersonaProvider();
 const iconSize = 20;
 const tabOrder: TabKey[] = ["chats", "contacts", "moments", "me"];
 
+type PendingReply = {
+  id: string;
+  conversationId: string;
+  userMessageId: string;
+  content: string;
+  createdAt: string;
+};
+
 const uiIconAssets = {
   "tab-chat": new URL("../assets/wechat-ui-icons/outlined/my_audit_comment.svg", import.meta.url).href,
   "tab-chat-filled": new URL("../assets/wechat-ui-icons/filled/my_audit_comment.svg", import.meta.url).href,
@@ -142,6 +150,18 @@ const fallbackMomentImages = [
 const fallbackMomentImage = (id: string) => {
   const index = [...id].reduce((sum, char) => sum + char.charCodeAt(0), 0) % fallbackMomentImages.length;
   return fallbackMomentImages[index];
+};
+
+const messageActionText = (message: Message) => {
+  if (message.contentType === "image") return message.media?.title || "图片";
+  if (message.contentType === "sticker") return message.media?.label || "表情";
+  if (message.contentType === "red_packet") return `[红包] ${message.redPacket?.blessing || message.content}`;
+  return message.content;
+};
+
+const shortMessagePreview = (message: Message) => {
+  const text = messageActionText(message).replace(/\s+/g, " ").trim();
+  return text.length > 28 ? `${text.slice(0, 28)}...` : text || "消息";
 };
 
 function Avatar({ character, size = "md" }: { character: Character; size?: "sm" | "md" | "lg" }) {
@@ -1620,6 +1640,8 @@ function ChatView({
   conversation,
   close,
   setState,
+  isThinking,
+  onQueueReply,
   onOpenProfile,
   onOpenUserProfile,
   onEditBackground
@@ -1628,12 +1650,13 @@ function ChatView({
   conversation: Conversation;
   close: () => void;
   setState: (updater: AppState | ((prev: AppState) => AppState)) => void;
+  isThinking: boolean;
+  onQueueReply: (conversationId: string, userMessageId: string, content: string) => void;
   onOpenProfile: (characterId: string) => void;
   onOpenUserProfile: () => void;
   onEditBackground: () => void;
 }) {
   const [text, setText] = useState("");
-  const [isThinking, setIsThinking] = useState(false);
   const [showStickers, setShowStickers] = useState(false);
   const [showImagePicker, setShowImagePicker] = useState(false);
   const [showMoreActions, setShowMoreActions] = useState(false);
@@ -1641,13 +1664,13 @@ function ChatView({
   const [redPacketAmount, setRedPacketAmount] = useState("88");
   const [redPacketBlessing, setRedPacketBlessing] = useState("恭喜发财，大吉大利");
   const [showChatActions, setShowChatActions] = useState(false);
+  const [activeMessage, setActiveMessage] = useState<Message | null>(null);
+  const [forwardingMessage, setForwardingMessage] = useState<Message | null>(null);
+  const [toastText, setToastText] = useState("");
   const messageListRef = useRef<HTMLDivElement | null>(null);
+  const longPressTimer = useRef<number | null>(null);
   const character = state.characters.find((item) => item.id === conversation.characterId)!;
   const messages = state.messages.filter((message) => message.conversationId === conversation.id);
-  const memorySummary = state.memories
-    .slice(0, 4)
-    .map((memory) => memory.content)
-    .join("\n");
 
   const scrollToBottom = () => {
     window.requestAnimationFrame(() => {
@@ -1659,6 +1682,12 @@ function ChatView({
   useEffect(() => {
     scrollToBottom();
   }, [conversation.id, messages.length, isThinking, showImagePicker, showStickers, showMoreActions, showRedPacketPanel]);
+
+  useEffect(() => {
+    return () => {
+      if (longPressTimer.current) window.clearTimeout(longPressTimer.current);
+    };
+  }, []);
 
   const appendMessages = (messagesToAdd: Message[]) => {
     const latest = messagesToAdd[messagesToAdd.length - 1];
@@ -1832,10 +1861,100 @@ function ChatView({
     }));
   };
 
+  const showToast = (message: string) => {
+    setToastText(message);
+    window.setTimeout(() => {
+      setToastText((current) => (current === message ? "" : current));
+    }, 1400);
+  };
+
+  const clearLongPress = () => {
+    if (longPressTimer.current) {
+      window.clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
+  const startLongPress = (message: Message) => {
+    clearLongPress();
+    longPressTimer.current = window.setTimeout(() => {
+      setActiveMessage(message);
+      longPressTimer.current = null;
+    }, 520);
+  };
+
+  const copyMessage = async (message: Message) => {
+    try {
+      if (!navigator.clipboard) throw new Error("Clipboard unavailable");
+      await navigator.clipboard.writeText(messageActionText(message));
+      showToast("已复制");
+    } catch {
+      showToast("复制失败");
+    }
+  };
+
+  const deleteMessage = (messageId: string) => {
+    setState((prev) => ({
+      ...prev,
+      messages: prev.messages.filter((message) => message.id !== messageId)
+    }));
+    showToast("已删除");
+  };
+
+  const favoriteMessage = (message: Message) => {
+    const content = messageActionText(message);
+    setState((prev) => ({
+      ...prev,
+      memories: [
+        {
+          id: createId("mem"),
+          type: "event" as const,
+          content: `收藏了一条聊天内容：${content.slice(0, 80)}`,
+          sensitivity: "low" as const,
+          sourceConversationId: message.conversationId,
+          createdAt: new Date().toISOString()
+        },
+        ...prev.memories
+      ].slice(0, 16)
+    }));
+    showToast("已收藏");
+  };
+
+  const quoteMessage = (message: Message) => {
+    setText(`「${shortMessagePreview(message)}」\n`);
+    window.setTimeout(scrollToBottom, 60);
+  };
+
+  const forwardMessage = (targetConversationId: string, message: Message) => {
+    const now = new Date().toISOString();
+    const forwarded: Message = {
+      ...message,
+      id: createId("msg"),
+      conversationId: targetConversationId,
+      senderType: "user",
+      senderCharacterId: undefined,
+      contentType: message.contentType === "red_packet" ? "text" : message.contentType,
+      content: message.contentType === "red_packet" ? messageActionText(message) : message.content,
+      redPacket: undefined,
+      aiGenerated: false,
+      riskLevel: "L0",
+      createdAt: now,
+      modelName: "human-forward"
+    };
+    setState((prev) => ({
+      ...prev,
+      messages: [...prev.messages, forwarded],
+      conversations: prev.conversations.map((item) =>
+        item.id === targetConversationId ? { ...item, lastMessageAt: now, unreadCount: 0 } : item
+      )
+    }));
+    showToast("已转发");
+  };
+
   const sendMessage = async (event?: FormEvent) => {
     event?.preventDefault();
     const content = text.trim();
-    if (!content || isThinking) return;
+    if (!content) return;
 
     const userMessage: Message = {
       id: createId("msg"),
@@ -1850,7 +1969,6 @@ function ChatView({
     };
 
     setText("");
-    setIsThinking(true);
     setState((prev) => {
       const withUser = {
         ...prev,
@@ -1861,119 +1979,7 @@ function ChatView({
       };
       return updateMemoryFromMessage(withUser, conversation.id, content);
     });
-
-    const activeProvider =
-      state.settings.providerMode === "openai_compatible" && hasConfiguredProvider(state.settings)
-        ? makeConfiguredProvider(state.settings)
-        : localProvider;
-
-    let result = await activeProvider
-      .chat({
-        character,
-        userMessage: content,
-        recentMessages: messages.slice(-12),
-        memorySummary,
-        globalSkillPrompt: state.settings.globalSkillPrompt,
-        globalSkillIds: []
-      })
-      .catch(async () => {
-        const fallback = await localProvider.chat({
-          character,
-          userMessage: content,
-          recentMessages: messages.slice(-12),
-          memorySummary,
-          globalSkillPrompt: state.settings.globalSkillPrompt,
-          globalSkillIds: []
-        });
-        return { ...fallback, modelName: "local-fallback-v1" };
-      });
-
-    window.setTimeout(async () => {
-      const aiMessage: Message = {
-        id: createId("msg"),
-        conversationId: conversation.id,
-        senderType: "ai",
-        senderCharacterId: character.id,
-        contentType: "text",
-        content: result.content,
-        aiGenerated: true,
-        riskLevel: result.riskLevel,
-        createdAt: new Date().toISOString(),
-        modelName: result.modelName
-      };
-      const outgoing: Message[] = [aiMessage];
-      const redPacketCue = /红包|钱|奖励|打赏|恭喜|生日|开心|加油|辛苦|难过|安慰|哄我|鼓励/.test(`${content} ${result.content}`);
-      const redPacketEnabled =
-        hasSkill(character, [], "red_packet") ||
-        hasSkill(character, [], "playful_combo");
-      if (result.riskLevel !== "L3" && result.riskLevel !== "L4" && (redPacketCue || (redPacketEnabled && /加油|辛苦|难过|开心|恭喜|生日/.test(content)))) {
-        const amount = pickRedPacketAmount(`${character.id}${content}${outgoing.length}`);
-        outgoing.push({
-          id: createId("msg"),
-          conversationId: conversation.id,
-          senderType: "ai",
-          senderCharacterId: character.id,
-          contentType: "red_packet",
-          content: "一点心意，收一下",
-          redPacket: {
-            amount,
-            blessing: "一点心意，收一下",
-            status: "unopened"
-          },
-          aiGenerated: true,
-          riskLevel: "L0",
-          createdAt: new Date().toISOString(),
-          modelName: "red-packet-skill"
-        });
-      }
-
-      if (shouldAttachImageFromText(content) && result.riskLevel !== "L3" && result.riskLevel !== "L4") {
-        const imagePrompt = imageQueryFromText(content, character);
-        const generated = await generateImageAsset(state.settings, imagePrompt).catch(() => null);
-        const images = generated ? [] : await searchImages(imagePrompt, 8).catch(() => []);
-        const asset = generated || (images[0] ? await cacheImageAsset(images[0]) : undefined);
-        if (asset) {
-          outgoing.push({
-            id: createId("msg"),
-            conversationId: conversation.id,
-            senderType: "ai",
-            senderCharacterId: character.id,
-            contentType: "image",
-            content: asset.title || imagePrompt || "图片",
-            media: asset,
-            aiGenerated: true,
-            riskLevel: "L0",
-            createdAt: new Date().toISOString(),
-            modelName: generated ? state.settings.apiImageModel || "image-generation" : "image-search"
-          });
-        }
-      }
-
-      setState((prev) => ({
-        ...prev,
-        messages: [...prev.messages, ...outgoing],
-        conversations: prev.conversations.map((item) =>
-          item.id === conversation.id
-            ? { ...item, lastMessageAt: outgoing[outgoing.length - 1].createdAt, unreadCount: 0 }
-            : item
-        ),
-        auditEvents:
-          result.riskLevel === "L3" || result.riskLevel === "L4"
-            ? [
-                {
-                  id: createId("audit"),
-                  eventType: "risk",
-                  riskLevel: result.riskLevel,
-                  summary: `${character.remarkName} 对话触发 ${result.riskLevel} 安全模式。`,
-                  evidenceMessageIds: [userMessage.id, aiMessage.id],
-                  createdAt: aiMessage.createdAt
-                },
-                ...prev.auditEvents
-              ]
-            : prev.auditEvents
-      }));
-      setIsThinking(false);
-    }, 520);
+    onQueueReply(conversation.id, userMessage.id, content);
   };
 
   const chatBackgroundUrl = (conversation.chatBackgroundUrl || "").trim();
@@ -1993,6 +1999,7 @@ function ChatView({
             {conversation.title}
             <AiBadge />
           </div>
+          {isThinking && <div className="chat-subtitle">对方正在输入...</div>}
         </div>
         <button className="icon-button" onClick={() => setShowChatActions(true)} title="聊天信息">
           <MoreHorizontal size={22} />
@@ -2018,6 +2025,14 @@ function ChatView({
                 className={`bubble bubble-${message.contentType} ${
                   message.riskLevel === "L3" || message.riskLevel === "L4" ? "risk" : ""
                 }`}
+                onContextMenu={(event) => {
+                  event.preventDefault();
+                  setActiveMessage(message);
+                }}
+                onTouchStart={() => startLongPress(message)}
+                onTouchMove={clearLongPress}
+                onTouchEnd={clearLongPress}
+                onTouchCancel={clearLongPress}
               >
                 {message.contentType === "image" && message.media ? (
                   <img className="message-image" src={message.media.url} alt={message.media.title || ""} />
@@ -2057,12 +2072,6 @@ function ChatView({
             </div>
           );
         })}
-        {isThinking && (
-          <div className="message-row">
-            <Avatar character={character} size="sm" />
-            <div className="bubble typing">正在输入...</div>
-          </div>
-        )}
       </div>
 
       <form className="composer" onSubmit={sendMessage}>
@@ -2228,6 +2237,37 @@ function ChatView({
           ]}
         />
       )}
+      {activeMessage && (
+        <ActionSheet
+          title={shortMessagePreview(activeMessage)}
+          onClose={() => setActiveMessage(null)}
+          actions={[
+            { label: "复制", icon: <Bookmark size={18} />, onClick: () => copyMessage(activeMessage) },
+            { label: "转发", icon: <Upload size={18} />, onClick: () => setForwardingMessage(activeMessage) },
+            { label: "收藏", icon: <Bookmark size={18} />, onClick: () => favoriteMessage(activeMessage) },
+            { label: "引用", icon: <MessageCircle size={18} />, onClick: () => quoteMessage(activeMessage) },
+            { label: "删除", icon: <Trash2 size={18} />, danger: true, onClick: () => deleteMessage(activeMessage.id) }
+          ]}
+        />
+      )}
+      {forwardingMessage && (
+        <ActionSheet
+          title="转发给"
+          onClose={() => setForwardingMessage(null)}
+          actions={state.conversations
+            .filter((item) => item.id !== conversation.id)
+            .slice(0, 6)
+            .map((item) => {
+              const targetCharacter = state.characters.find((characterItem) => characterItem.id === item.characterId);
+              return {
+                label: item.title,
+                icon: targetCharacter ? <Avatar character={targetCharacter} size="sm" /> : undefined,
+                onClick: () => forwardMessage(item.id, forwardingMessage)
+              };
+            })}
+        />
+      )}
+      {toastText && <div className="chat-toast">{toastText}</div>}
     </section>
   );
 }
@@ -2268,8 +2308,16 @@ export default function App() {
   const [isGeneratingMoment, setIsGeneratingMoment] = useState(false);
   const [isMainActionsOpen, setIsMainActionsOpen] = useState(false);
   const [addFriendRequest, setAddFriendRequest] = useState(0);
+  const [pendingReplies, setPendingReplies] = useState<PendingReply[]>([]);
   const historyReady = useRef(false);
   const mainSwipeStart = useRef<{ x: number; y: number } | null>(null);
+  const activeConversationIdRef = useRef<string | null>(null);
+  const processingReplyIds = useRef(new Set<string>());
+  const processingConversationIds = useRef(new Set<string>());
+
+  useEffect(() => {
+    activeConversationIdRef.current = activeConversationId;
+  }, [activeConversationId]);
 
   useEffect(() => {
     saveAppState(state);
@@ -2283,6 +2331,209 @@ export default function App() {
     setIsMomentsOpen(false);
     setState((prev) => ({ ...prev, user: { ...prev.user, lastActiveAt: new Date().toISOString() } }));
     void checkForInternalUpdate();
+  }, []);
+
+  useEffect(() => {
+    pendingReplies.forEach((pending) => {
+      if (processingReplyIds.current.has(pending.id) || processingConversationIds.current.has(pending.conversationId)) return;
+      const conversationSnapshot = state.conversations.find((item) => item.id === pending.conversationId);
+      if (!conversationSnapshot) {
+        setPendingReplies((prev) => prev.filter((item) => item.id !== pending.id));
+        return;
+      }
+      const characterSnapshot = state.characters.find((item) => item.id === conversationSnapshot.characterId);
+      if (!characterSnapshot) {
+        setPendingReplies((prev) => prev.filter((item) => item.id !== pending.id));
+        return;
+      }
+
+      processingReplyIds.current.add(pending.id);
+      processingConversationIds.current.add(pending.conversationId);
+
+      const run = async () => {
+        try {
+          const memorySummary = state.memories
+            .slice(0, 5)
+            .map((memory) => memory.content)
+            .join("\n");
+          const recentMessages = state.messages
+            .filter((message) => message.conversationId === pending.conversationId && message.senderType !== "system")
+            .slice(-12);
+          const activeProvider =
+            state.settings.providerMode === "openai_compatible" && hasConfiguredProvider(state.settings)
+              ? makeConfiguredProvider(state.settings)
+              : localProvider;
+          const result = await activeProvider
+            .chat({
+              character: characterSnapshot,
+              userMessage: pending.content,
+              recentMessages,
+              memorySummary,
+              globalSkillPrompt: state.settings.globalSkillPrompt,
+              globalSkillIds: []
+            })
+            .catch(async () => {
+              const fallback = await localProvider.chat({
+                character: characterSnapshot,
+                userMessage: pending.content,
+                recentMessages,
+                memorySummary,
+                globalSkillPrompt: state.settings.globalSkillPrompt,
+                globalSkillIds: []
+              });
+              return { ...fallback, modelName: "local-fallback-v1" };
+            });
+
+          const delay = Math.min(2200, 520 + pending.content.length * 18 + characterSnapshot.personality.warmth * 22);
+          await new Promise((resolve) => window.setTimeout(resolve, delay));
+
+          const aiMessage: Message = {
+            id: createId("msg"),
+            conversationId: pending.conversationId,
+            senderType: "ai",
+            senderCharacterId: characterSnapshot.id,
+            contentType: "text",
+            content: result.content,
+            aiGenerated: true,
+            riskLevel: result.riskLevel,
+            createdAt: new Date().toISOString(),
+            modelName: result.modelName
+          };
+          const outgoing: Message[] = [aiMessage];
+          const redPacketCue = /红包|钱|奖励|打赏|恭喜|生日|开心|加油|辛苦|难过|安慰|哄我|鼓励/.test(
+            `${pending.content} ${result.content}`
+          );
+          const redPacketEnabled =
+            hasSkill(characterSnapshot, [], "red_packet") || hasSkill(characterSnapshot, [], "playful_combo");
+          if (
+            result.riskLevel !== "L3" &&
+            result.riskLevel !== "L4" &&
+            (redPacketCue || (redPacketEnabled && /加油|辛苦|难过|开心|恭喜|生日/.test(pending.content)))
+          ) {
+            const amount = pickRedPacketAmount(`${characterSnapshot.id}${pending.content}${outgoing.length}`);
+            outgoing.push({
+              id: createId("msg"),
+              conversationId: pending.conversationId,
+              senderType: "ai",
+              senderCharacterId: characterSnapshot.id,
+              contentType: "red_packet",
+              content: "一点心意，收一下",
+              redPacket: {
+                amount,
+                blessing: "一点心意，收一下",
+                status: "unopened"
+              },
+              aiGenerated: true,
+              riskLevel: "L0",
+              createdAt: new Date().toISOString(),
+              modelName: "red-packet-skill"
+            });
+          }
+
+          if (shouldAttachImageFromText(pending.content) && result.riskLevel !== "L3" && result.riskLevel !== "L4") {
+            const imagePrompt = imageQueryFromText(pending.content, characterSnapshot);
+            const generated = await generateImageAsset(state.settings, imagePrompt).catch(() => null);
+            const images = generated ? [] : await searchImages(imagePrompt, 8).catch(() => []);
+            const asset = generated || (images[0] ? await cacheImageAsset(images[0]) : undefined);
+            if (asset) {
+              outgoing.push({
+                id: createId("msg"),
+                conversationId: pending.conversationId,
+                senderType: "ai",
+                senderCharacterId: characterSnapshot.id,
+                contentType: "image",
+                content: asset.title || imagePrompt || "图片",
+                media: asset,
+                aiGenerated: true,
+                riskLevel: "L0",
+                createdAt: new Date().toISOString(),
+                modelName: generated ? state.settings.apiImageModel || "image-generation" : "image-search"
+              });
+            }
+          }
+
+          const lastOutgoingAt = outgoing[outgoing.length - 1].createdAt;
+          const isOpenConversation = activeConversationIdRef.current === pending.conversationId;
+          setState((prev) => ({
+            ...prev,
+            messages: [...prev.messages, ...outgoing],
+            conversations: prev.conversations.map((item) =>
+              item.id === pending.conversationId
+                ? {
+                    ...item,
+                    lastMessageAt: lastOutgoingAt,
+                    unreadCount: isOpenConversation ? 0 : item.unreadCount + 1
+                  }
+                : item
+            ),
+            auditEvents:
+              result.riskLevel === "L3" || result.riskLevel === "L4"
+                ? [
+                    {
+                      id: createId("audit"),
+                      eventType: "risk",
+                      riskLevel: result.riskLevel,
+                      summary: `${characterSnapshot.remarkName} 对话触发 ${result.riskLevel} 安全模式。`,
+                      evidenceMessageIds: [pending.userMessageId, aiMessage.id],
+                      createdAt: aiMessage.createdAt
+                    },
+                    ...prev.auditEvents
+                  ]
+                : prev.auditEvents
+          }));
+        } finally {
+          processingReplyIds.current.delete(pending.id);
+          processingConversationIds.current.delete(pending.conversationId);
+          setPendingReplies((prev) => prev.filter((item) => item.id !== pending.id));
+        }
+      };
+
+      void run();
+    });
+  }, [pendingReplies, state]);
+
+  useEffect(() => {
+    const publishAutoMoment = () => {
+      setState((prev) => {
+        if (!prev.settings.momentsEnabled) return prev;
+        const now = Date.now();
+        const recentAutoMoment = prev.moments.some(
+          (post) =>
+            post.aiGenerated &&
+            post.generationReason === "auto_local_moment" &&
+            now - new Date(post.createdAt).getTime() < 20 * 60 * 1000
+        );
+        if (recentAutoMoment) return prev;
+
+        const today = new Date().toDateString();
+        const candidates = prev.characters.filter((character) => {
+          if (!character.enabled || !character.momentsPolicy.enabled || character.momentsPolicy.maxPostsPerDay <= 0) return false;
+          const todayPosts = prev.moments.filter(
+            (post) =>
+              post.authorCharacterId === character.id &&
+              post.aiGenerated &&
+              post.generationReason === "auto_local_moment" &&
+              new Date(post.createdAt).toDateString() === today
+          ).length;
+          return todayPosts < character.momentsPolicy.maxPostsPerDay;
+        });
+        if (candidates.length === 0) return prev;
+
+        const character = candidates[(prev.moments.length + new Date().getMinutes()) % candidates.length];
+        const post = generateMoment(prev, character);
+        return {
+          ...prev,
+          moments: [{ ...post, generationReason: "auto_local_moment" }, ...prev.moments]
+        };
+      });
+    };
+
+    const firstRun = window.setTimeout(publishAutoMoment, 2500);
+    const timer = window.setInterval(publishAutoMoment, 2 * 60 * 1000);
+    return () => {
+      window.clearTimeout(firstRun);
+      window.clearInterval(timer);
+    };
   }, []);
 
   useEffect(() => {
@@ -2725,6 +2976,19 @@ export default function App() {
     });
   };
 
+  const queueReply = (conversationId: string, userMessageId: string, content: string) => {
+    setPendingReplies((prev) => [
+      ...prev,
+      {
+        id: createId("pending"),
+        conversationId,
+        userMessageId,
+        content,
+        createdAt: new Date().toISOString()
+      }
+    ]);
+  };
+
   const activeTabIndex = Math.max(0, tabOrder.indexOf(activeTab));
 
   return (
@@ -2735,6 +2999,8 @@ export default function App() {
           conversation={activeConversation}
           close={closeConversation}
           setState={setState}
+          isThinking={pendingReplies.some((reply) => reply.conversationId === activeConversation.id)}
+          onQueueReply={queueReply}
           onOpenProfile={openCharacterProfile}
           onOpenUserProfile={openUserProfile}
           onEditBackground={() => setEditingBackgroundConversationId(activeConversation.id)}

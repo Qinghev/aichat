@@ -3735,6 +3735,51 @@ button.profile-edit-row {
   border-radius: 50%;
 }
 
+.chat-header > div {
+  min-width: 0;
+  text-align: center;
+}
+
+.chat-subtitle {
+  margin-top: 1px;
+  color: #7b7b7b;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.15;
+}
+
+.plus-tool-button {
+  width: 30px;
+  height: 30px;
+  justify-self: center;
+  border-width: 1.3px;
+}
+
+.plus-tool-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.chat-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(96px + env(safe-area-inset-bottom));
+  z-index: 60;
+  transform: translateX(-50%);
+  max-width: min(70vw, 320px);
+  padding: 8px 14px;
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  font-size: 13px;
+  pointer-events: none;
+}
+
+.sheet-actions .avatar-sm {
+  width: 28px;
+  height: 28px;
+}
+
 .discover-row .wechat-icon,
 .discover-row .wechat-icon-asset {
   background: transparent;
