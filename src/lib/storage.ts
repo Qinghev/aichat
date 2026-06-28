@@ -39,7 +39,9 @@ const migrateState = (state: AppState): AppState => {
         avatarUrl: character.avatarUrl || seedCharacter?.avatarUrl || "",
         album: character.album || seedCharacter?.album || [],
         skillPrompt: character.skillPrompt || seedCharacter?.skillPrompt || "",
-        skillIds: character.skillIds || seedCharacter?.skillIds || []
+        skillIds: character.skillIds || seedCharacter?.skillIds || [],
+        apiTextModel: character.apiTextModel || seedCharacter?.apiTextModel || "",
+        apiImageModel: character.apiImageModel || seedCharacter?.apiImageModel || ""
       };
     }),
     messages: state.messages.map((message) => ({

@@ -1,9 +1,9 @@
 {
-    "versionCode":  17,
-    "versionName":  "2.6",
+    "versionCode":  18,
+    "versionName":  "2.7",
     "apkUrl":  "https://qinghev.github.io/aichat/AIChatSandbox-debug.apk",
-    "sha256":  "68702D217A268B1F7148E91E787AFDA13B632126C5A3C95EFBB7FCF1DAFC692B",
-    "notes":  "增强聊天个性化与熟人感，修复等待中退出后回复丢失，新增消息长按菜单、顶部正在输入提示和朋友圈自动发布。",
+    "sha256":  "992BA87C3755F63681B695EBC94914FF7D397052011BEA73192965FE7491BEC9",
+    "notes":  "修复未读红点进入会话不清除；增强生图接口兼容性并在选图面板加入生成入口；扩展常用模型候选；支持每个联系人单独设置文字模型和生图模型。",
     "mandatory":  false,
-    "createdAt":  "2026-06-27T15:39:01Z"
+    "createdAt":  "2026-06-28T01:07:54Z"
 }

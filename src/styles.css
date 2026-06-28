@@ -613,7 +613,7 @@ button {
 
 .image-search-row {
   display: grid;
-  grid-template-columns: 24px 1fr 58px;
+  grid-template-columns: 24px 1fr 52px 52px;
   align-items: center;
   gap: 6px;
   min-height: 42px;
@@ -641,6 +641,13 @@ button {
 
 .image-search-row button:disabled {
   background: #b9c3bd;
+}
+
+.image-search-status {
+  margin-top: 7px;
+  color: #7b7b7b;
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .image-results {

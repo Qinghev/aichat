@@ -144,6 +144,7 @@ type CommonsPage = {
 
 export const searchImages = async (query: string, limit = 12): Promise<MediaAsset[]> => {
   const normalized = query.trim() || "城市 生活 风景";
+  const expandedQuery = `${normalized} ${fallbackKeywords(normalized).replace(/,/g, " ")}`.trim();
   const url = new URL(COMMONS_API_URL);
   url.searchParams.set("action", "query");
   url.searchParams.set("origin", "*");
@@ -151,7 +152,7 @@ export const searchImages = async (query: string, limit = 12): Promise<MediaAsse
   url.searchParams.set("generator", "search");
   url.searchParams.set("gsrnamespace", "6");
   url.searchParams.set("gsrlimit", String(limit));
-  url.searchParams.set("gsrsearch", normalized);
+  url.searchParams.set("gsrsearch", expandedQuery);
   url.searchParams.set("prop", "imageinfo");
   url.searchParams.set("iiprop", "url|mime");
   url.searchParams.set("iiurlwidth", "900");

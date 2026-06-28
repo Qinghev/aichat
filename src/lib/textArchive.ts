@@ -26,6 +26,8 @@ export interface TextArchive {
       | "background"
       | "skillPrompt"
       | "skillIds"
+      | "apiTextModel"
+      | "apiImageModel"
       | "personality"
       | "speechStyle"
       | "boundaries"
@@ -72,6 +74,8 @@ export const makeTextArchive = (state: AppState): TextArchive => ({
     background: character.background,
     skillPrompt: character.skillPrompt,
     skillIds: character.skillIds,
+    apiTextModel: character.apiTextModel,
+    apiImageModel: character.apiImageModel,
     personality: character.personality,
     speechStyle: character.speechStyle,
     boundaries: character.boundaries,

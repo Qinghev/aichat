@@ -53,6 +53,8 @@ export interface Character {
   background: string;
   skillPrompt?: string;
   skillIds?: SkillId[];
+  apiTextModel?: string;
+  apiImageModel?: string;
   personality: Personality;
   speechStyle: {
     sentenceLength: "short" | "medium" | "long";

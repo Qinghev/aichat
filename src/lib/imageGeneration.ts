@@ -8,29 +8,48 @@ const imagesGenerationsUrl = (baseUrl?: string) => {
   return base.endsWith("/images/generations") ? base : `${base}/images/generations`;
 };
 
-const imageBody = (settings: Pick<Settings, "apiImageModel" | "apiImageSize">, prompt: string) => {
+const imageBodies = (settings: Pick<Settings, "apiImageModel" | "apiImageSize">, prompt: string) => {
   const size = settings.apiImageSize || "1k";
-  const body: Record<string, unknown> = {
+  const baseBody: Record<string, unknown> = {
     model: settings.apiImageModel || "grok-imagine-image-quality",
     prompt,
-    n: 1,
-    response_format: "b64_json"
+    n: 1
   };
 
+  const sizedBody = { ...baseBody };
   if (/^\d+x\d+$/i.test(size)) {
-    body.size = size;
+    sizedBody.size = size;
   } else {
-    body.resolution = size;
+    sizedBody.resolution = size;
   }
 
-  return body;
+  const openAiSize = { ...baseBody, size: /^\d+x\d+$/i.test(size) ? size : "1024x1024" };
+  return [
+    { ...sizedBody, response_format: "b64_json" },
+    sizedBody,
+    { ...openAiSize, response_format: "b64_json" },
+    openAiSize
+  ];
 };
 
 const responseToAsset = (data: any, prompt: string): MediaAsset | null => {
-  const item = data?.data?.[0];
+  const item = data?.data?.[0] || data?.images?.[0] || data?.output?.[0]?.content?.[0] || data?.image || data;
   if (!item) return null;
-  const base64 = item.b64_json || item.image_base64;
-  const url = base64 ? `data:image/png;base64,${base64}` : item.url;
+  const stringValue = (value: unknown) => (typeof value === "string" ? value : "");
+  const base64 =
+    stringValue(item.b64_json) ||
+    stringValue(item.image_base64) ||
+    stringValue(item.base64) ||
+    stringValue(item.data) ||
+    (typeof item === "string" && !item.startsWith("http") && !item.startsWith("data:") ? item : "");
+  const rawUrl =
+    stringValue(item.url) ||
+    stringValue(item.image_url) ||
+    stringValue(item.output_url) ||
+    stringValue(item?.content?.[0]?.url) ||
+    (typeof item === "string" && (item.startsWith("http") || item.startsWith("data:")) ? item : "");
+  const mime = item.mime_type || item.mime || "image/png";
+  const url = base64 ? `data:${mime};base64,${base64}` : rawUrl;
   if (!url) return null;
   return {
     id: `gen_${crypto.randomUUID()}`,
@@ -54,25 +73,35 @@ export const generateImageAsset = async (
     "Content-Type": "application/json",
     Authorization: `Bearer ${settings.apiKey}`
   };
-  const body = imageBody(settings, prompt);
+  let lastError: unknown;
+  for (const body of imageBodies(settings, prompt)) {
+    try {
+      if (Capacitor.isNativePlatform()) {
+        const response = await CapacitorHttp.request({
+          method: "POST",
+          url,
+          headers,
+          data: body,
+          responseType: "json"
+        });
+        if (response.status < 200 || response.status >= 300) throw new Error(`Image provider failed with HTTP ${response.status}.`);
+        const asset = responseToAsset(response.data, prompt);
+        if (asset) return asset;
+        throw new Error("Image provider returned no image.");
+      }
 
-  if (Capacitor.isNativePlatform()) {
-    const response = await CapacitorHttp.request({
-      method: "POST",
-      url,
-      headers,
-      data: body,
-      responseType: "json"
-    });
-    if (response.status < 200 || response.status >= 300) throw new Error(`Image provider failed with HTTP ${response.status}.`);
-    return responseToAsset(response.data, prompt);
+      const response = await fetch(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body)
+      });
+      if (!response.ok) throw new Error(`Image provider failed with HTTP ${response.status}.`);
+      const asset = responseToAsset(await response.json(), prompt);
+      if (asset) return asset;
+      throw new Error("Image provider returned no image.");
+    } catch (error) {
+      lastError = error;
+    }
   }
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(body)
-  });
-  if (!response.ok) throw new Error(`Image provider failed with HTTP ${response.status}.`);
-  return responseToAsset(await response.json(), prompt);
+  throw lastError instanceof Error ? lastError : new Error("Image provider failed.");
 };

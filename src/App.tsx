@@ -72,6 +72,45 @@ const localProvider = new LocalPersonaProvider();
 
 const iconSize = 20;
 const tabOrder: TabKey[] = ["chats", "contacts", "moments", "me"];
+const textModelOptions = [
+  "grok-4",
+  "grok-4.3",
+  "grok-3",
+  "grok-3-mini",
+  "gpt-4.1",
+  "gpt-4.1-mini",
+  "gpt-4o",
+  "gpt-4o-mini",
+  "o3",
+  "o4-mini",
+  "claude-sonnet-4-20250514",
+  "claude-3-7-sonnet-20250219",
+  "claude-3-5-sonnet-20241022",
+  "claude-3-5-haiku-20241022",
+  "gemini-2.5-pro",
+  "gemini-2.5-flash",
+  "gemini-2.0-flash",
+  "deepseek-chat",
+  "deepseek-reasoner",
+  "qwen-plus",
+  "qwen-max",
+  "qwen-turbo",
+  "qwen3-235b-a22b",
+  "kimi-latest",
+  "glm-4.5"
+];
+const imageModelOptions = [
+  "grok-imagine-image-quality",
+  "grok-2-image",
+  "gpt-image-1",
+  "gpt-image-2",
+  "dall-e-3",
+  "gemini-2.5-flash-image-preview",
+  "imagen-4",
+  "flux.1-kontext-pro",
+  "flux.1-dev"
+];
+const imageSizeOptions = ["1k", "2k", "1024x1024", "1792x1024", "1024x1792", "1536x1024", "1024x1536"];
 
 type PendingReply = {
   id: string;
@@ -163,6 +202,13 @@ const shortMessagePreview = (message: Message) => {
   const text = messageActionText(message).replace(/\s+/g, " ").trim();
   return text.length > 28 ? `${text.slice(0, 28)}...` : text || "消息";
 };
+
+const modelSettingsForCharacter = (settings: AppState["settings"], character?: Character) => ({
+  ...settings,
+  apiTextModel: character?.apiTextModel?.trim() || settings.apiTextModel,
+  apiModel: character?.apiTextModel?.trim() || settings.apiModel,
+  apiImageModel: character?.apiImageModel?.trim() || settings.apiImageModel
+});
 
 function Avatar({ character, size = "md" }: { character: Character; size?: "sm" | "md" | "lg" }) {
   const style = character.avatarUrl
@@ -430,26 +476,55 @@ function GlobalSearchPanel({
 
 function ImageSearchPanel({
   initialQuery,
+  imageSettings,
   onPick
 }: {
   initialQuery: string;
+  imageSettings?: Pick<AppState["settings"], "apiKey" | "apiBaseUrl" | "apiImageModel" | "apiImageSize">;
   onPick: (asset: MediaAsset) => void;
 }) {
   const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<MediaAsset[]>([]);
   const [loading, setLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [pickingId, setPickingId] = useState("");
+  const [status, setStatus] = useState("");
 
   const runSearch = async (event?: FormEvent) => {
     event?.preventDefault();
-    if (!query.trim() || loading) return;
+    if (!query.trim() || loading || generating) return;
     setLoading(true);
+    setStatus("");
     try {
       setResults(await searchImages(query, 12));
     } catch {
       setResults([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const runGenerate = async () => {
+    if (!query.trim() || loading || generating) return;
+    if (!imageSettings?.apiKey || !imageSettings.apiBaseUrl || !imageSettings.apiImageModel) {
+      setStatus("先在设置里填写 API Key 和生图模型");
+      return;
+    }
+    setGenerating(true);
+    setStatus("");
+    try {
+      const generated = await generateImageAsset(imageSettings, query.trim());
+      if (generated) {
+        setResults([generated]);
+        return;
+      }
+      setStatus("生成失败，已改为搜索图片");
+      setResults(await searchImages(query, 12));
+    } catch {
+      setStatus("生成失败，已改为搜索图片");
+      setResults(await searchImages(query, 12));
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -464,10 +539,14 @@ function ImageSearchPanel({
       <form className="image-search-row" onSubmit={runSearch}>
         <Search size={17} />
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索图片" />
-        <button type="submit" disabled={loading}>
+        <button type="button" onClick={runGenerate} disabled={generating || loading}>
+          {generating ? <Loader2 size={17} /> : "生成"}
+        </button>
+        <button type="submit" disabled={loading || generating}>
           {loading ? <Loader2 size={17} /> : "搜索"}
         </button>
       </form>
+      {status && <div className="image-search-status">{status}</div>}
       {results.length > 0 && (
         <div className="image-results">
           {results.map((asset) => (
@@ -485,6 +564,7 @@ function AvatarEditor({
   title,
   initialUrl,
   searchHint,
+  imageSettings,
   filePrefix = "avatar",
   onClose,
   onSave
@@ -492,6 +572,7 @@ function AvatarEditor({
   title: string;
   initialUrl?: string;
   searchHint: string;
+  imageSettings?: Pick<AppState["settings"], "apiKey" | "apiBaseUrl" | "apiImageModel" | "apiImageSize">;
   filePrefix?: string;
   onClose: () => void;
   onSave: (avatarUrl: string) => void;
@@ -524,6 +605,7 @@ function AvatarEditor({
         </label>
         <ImageSearchPanel
           initialQuery={searchHint}
+          imageSettings={imageSettings}
           onPick={(asset) => {
             setUrl(asset.url);
             onSave(asset.url);
@@ -701,9 +783,11 @@ function ContactsTab({
 }
 
 function MomentComposer({
+  imageSettings,
   onClose,
   onPublish
 }: {
+  imageSettings: Pick<AppState["settings"], "apiKey" | "apiBaseUrl" | "apiImageModel" | "apiImageSize">;
   onClose: () => void;
   onPublish: (content: string, media: MediaAsset[]) => void;
 }) {
@@ -753,6 +837,7 @@ function MomentComposer({
         </label>
         <ImageSearchPanel
           initialQuery={content || "生活 风景"}
+          imageSettings={imageSettings}
           onPick={(asset) => setMedia((prev) => [...prev, asset].slice(0, 9))}
         />
         <button className="primary-button" type="button" onClick={publish} disabled={!content.trim() && media.length === 0}>
@@ -857,7 +942,13 @@ function MomentsTab({
             />
           ))}
         </div>
-        {isComposing && <MomentComposer onClose={() => setIsComposing(false)} onPublish={onPublish} />}
+        {isComposing && (
+          <MomentComposer
+            imageSettings={state.settings}
+            onClose={() => setIsComposing(false)}
+            onPublish={onPublish}
+          />
+        )}
       </div>
     </section>
   );
@@ -1107,6 +1198,31 @@ function CharacterProfilePage({
               onChange={(event) =>
                 onUpdate({ ...character, speechStyle: { ...character.speechStyle, tone: event.target.value } })
               }
+            />
+          </label>
+        </section>
+
+        <section className="wechat-card">
+          <div className="profile-card-title">
+            <Sparkles size={18} />
+            模型
+          </div>
+          <label className="profile-edit-row">
+            <span>文字模型</span>
+            <input
+              list="api-text-model-options"
+              value={character.apiTextModel || ""}
+              onChange={(event) => onUpdate({ ...character, apiTextModel: event.target.value })}
+              placeholder="留空使用全局"
+            />
+          </label>
+          <label className="profile-edit-row">
+            <span>生图模型</span>
+            <input
+              list="api-image-model-options"
+              value={character.apiImageModel || ""}
+              onChange={(event) => onUpdate({ ...character, apiImageModel: event.target.value })}
+              placeholder="留空使用全局"
             />
           </label>
         </section>
@@ -1494,13 +1610,6 @@ function SettingsPanel({
               }}
               placeholder="grok-4.3"
             />
-            <datalist id="api-text-model-options">
-              <option value="grok-4.3" />
-              <option value="grok-4" />
-              <option value="grok-3" />
-              <option value="grok-3-mini" />
-              <option value="deepseek-chat" />
-            </datalist>
           </label>
           <label>
             <span>生图模型</span>
@@ -1510,10 +1619,6 @@ function SettingsPanel({
               onChange={(event) => updateSetting("apiImageModel", event.target.value)}
               placeholder="grok-imagine-image-quality"
             />
-            <datalist id="api-image-model-options">
-              <option value="grok-imagine-image-quality" />
-              <option value="grok-2-image" />
-            </datalist>
           </label>
           <label>
             <span>图片规格</span>
@@ -1523,13 +1628,6 @@ function SettingsPanel({
               onChange={(event) => updateSetting("apiImageSize", event.target.value)}
               placeholder="1k"
             />
-            <datalist id="api-image-size-options">
-              <option value="1k" />
-              <option value="2k" />
-              <option value="1024x1024" />
-              <option value="1792x1024" />
-              <option value="1024x1792" />
-            </datalist>
           </label>
           <label className="settings-textarea-label">
             <span>全局 Skill</span>
@@ -1581,12 +1679,36 @@ function SettingsPanel({
   );
 }
 
+function ModelOptionDatalists() {
+  return (
+    <>
+      <datalist id="api-text-model-options">
+        {textModelOptions.map((model) => (
+          <option value={model} key={model} />
+        ))}
+      </datalist>
+      <datalist id="api-image-model-options">
+        {imageModelOptions.map((model) => (
+          <option value={model} key={model} />
+        ))}
+      </datalist>
+      <datalist id="api-image-size-options">
+        {imageSizeOptions.map((size) => (
+          <option value={size} key={size} />
+        ))}
+      </datalist>
+    </>
+  );
+}
+
 function ChatBackgroundEditor({
   conversation,
+  imageSettings,
   onClose,
   onSave
 }: {
   conversation: Conversation;
+  imageSettings: Pick<AppState["settings"], "apiKey" | "apiBaseUrl" | "apiImageModel" | "apiImageSize">;
   onClose: () => void;
   onSave: (conversationId: string, chatBackgroundUrl: string) => void;
 }) {
@@ -1623,6 +1745,7 @@ function ChatBackgroundEditor({
         </label>
         <ImageSearchPanel
           initialQuery={`${conversation.title} 聊天背景 壁纸`}
+          imageSettings={imageSettings}
           onPick={(asset) => save(asset.url)}
         />
         {previewUrl && (
@@ -2153,6 +2276,7 @@ function ChatView({
           </label>
           <ImageSearchPanel
             initialQuery={imageQueryFromText(text, character)}
+            imageSettings={modelSettingsForCharacter(state.settings, character)}
             onPick={(asset) => sendMediaMessage(asset, "image")}
           />
         </div>
@@ -2359,9 +2483,10 @@ export default function App() {
           const recentMessages = state.messages
             .filter((message) => message.conversationId === pending.conversationId && message.senderType !== "system")
             .slice(-12);
+          const characterSettings = modelSettingsForCharacter(state.settings, characterSnapshot);
           const activeProvider =
-            state.settings.providerMode === "openai_compatible" && hasConfiguredProvider(state.settings)
-              ? makeConfiguredProvider(state.settings)
+            characterSettings.providerMode === "openai_compatible" && hasConfiguredProvider(characterSettings)
+              ? makeConfiguredProvider(characterSettings)
               : localProvider;
           const result = await activeProvider
             .chat({
@@ -2432,7 +2557,7 @@ export default function App() {
 
           if (shouldAttachImageFromText(pending.content) && result.riskLevel !== "L3" && result.riskLevel !== "L4") {
             const imagePrompt = imageQueryFromText(pending.content, characterSnapshot);
-            const generated = await generateImageAsset(state.settings, imagePrompt).catch(() => null);
+            const generated = await generateImageAsset(characterSettings, imagePrompt).catch(() => null);
             const images = generated ? [] : await searchImages(imagePrompt, 8).catch(() => []);
             const asset = generated || (images[0] ? await cacheImageAsset(images[0]) : undefined);
             if (asset) {
@@ -2447,7 +2572,7 @@ export default function App() {
                 aiGenerated: true,
                 riskLevel: "L0",
                 createdAt: new Date().toISOString(),
-                modelName: generated ? state.settings.apiImageModel || "image-generation" : "image-search"
+                modelName: generated ? characterSettings.apiImageModel || "image-generation" : "image-search"
               });
             }
           }
@@ -2667,6 +2792,12 @@ export default function App() {
     setActiveProfileCharacterId(null);
     setIsUserProfileOpen(false);
     setIsMomentsOpen(false);
+    setState((prev) => ({
+      ...prev,
+      conversations: prev.conversations.map((conversation) =>
+        conversation.id === conversationId ? { ...conversation, unreadCount: 0 } : conversation
+      )
+    }));
     window.history.pushState(
       { app: "weichat", tab: "chats", conversationId, profileCharacterId: null, userProfileOpen: false, momentsOpen: false },
       ""
@@ -2749,6 +2880,12 @@ export default function App() {
       setIsUserProfileOpen(false);
       setIsMomentsOpen(false);
       setActiveTab("chats");
+      setState((prev) => ({
+        ...prev,
+        conversations: prev.conversations.map((conversation) =>
+          conversation.id === existing.id ? { ...conversation, unreadCount: 0 } : conversation
+        )
+      }));
       window.history.pushState(
         { app: "weichat", tab: "chats", conversationId: existing.id, profileCharacterId: null, userProfileOpen: false, momentsOpen: false },
         ""
@@ -2878,7 +3015,8 @@ export default function App() {
     const character = available[state.moments.length % available.length] ?? state.characters[0];
     const post = generateMoment(state, character);
     const imagePrompt = momentImageQuery(post.content, character);
-    const generated = await generateImageAsset(state.settings, imagePrompt).catch(() => null);
+    const characterSettings = modelSettingsForCharacter(state.settings, character);
+    const generated = await generateImageAsset(characterSettings, imagePrompt).catch(() => null);
     const images = generated ? [] : await searchImages(imagePrompt, 8).catch(() => []);
     const image = generated || (images[0] ? await cacheImageAsset(images[0]) : undefined);
     setState((prev) => ({
@@ -2993,6 +3131,7 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      <ModelOptionDatalists />
       {activeConversation ? (
         <ChatView
           state={state}
@@ -3104,6 +3243,7 @@ export default function App() {
       {activeBackgroundConversation && (
         <ChatBackgroundEditor
           conversation={activeBackgroundConversation}
+          imageSettings={state.settings}
           onClose={() => setEditingBackgroundConversationId(null)}
           onSave={updateConversationBackground}
         />
@@ -3113,6 +3253,10 @@ export default function App() {
           title="设置头像"
           initialUrl={state.characters.find((character) => character.id === editingCharacterId)?.avatarUrl}
           searchHint={state.characters.find((character) => character.id === editingCharacterId)?.remarkName || "头像"}
+          imageSettings={modelSettingsForCharacter(
+            state.settings,
+            state.characters.find((character) => character.id === editingCharacterId)
+          )}
           onClose={() => setEditingCharacterId(null)}
           onSave={(avatarUrl) => updateCharacterAvatar(editingCharacterId!, avatarUrl)}
         />
@@ -3122,6 +3266,7 @@ export default function App() {
           title="设置头像"
           initialUrl={state.user.avatarUrl}
           searchHint={`${state.user.displayName} 头像`}
+          imageSettings={state.settings}
           onClose={() => setIsEditingUserAvatar(false)}
           onSave={updateUserAvatar}
         />
@@ -3132,6 +3277,7 @@ export default function App() {
           initialUrl={state.settings.momentsCoverUrl}
           searchHint="朋友圈 封面 风景"
           filePrefix="moments-background"
+          imageSettings={state.settings}
           onClose={() => setIsEditingMomentsCover(false)}
           onSave={updateMomentsCover}
         />
