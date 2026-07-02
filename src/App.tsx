@@ -66,7 +66,7 @@ import { checkForInternalUpdate } from "./lib/updater";
 import { formatMoney, normalizeWallet, pickRedPacketAmount } from "./lib/wallet";
 import { hasSkill, mergeSkillIds, skillCombos, skillPresets, toggleSkillId } from "./lib/skills";
 import { defaultGlobalSkillPrompt } from "./lib/globalSkillTemplate";
-import type { AppState, Character, Conversation, MediaAsset, Message, MomentPost, SkillId, TabKey, UserProfile } from "./types";
+import type { AppState, Character, Conversation, MediaAsset, MemoryNote, Message, MomentPost, SkillId, TabKey, UserProfile } from "./types";
 
 const localProvider = new LocalPersonaProvider();
 
@@ -116,9 +116,12 @@ type PendingReply = {
   id: string;
   conversationId: string;
   userMessageId: string;
+  characterId?: string;
   content: string;
   createdAt: string;
 };
+
+type ToolKey = "research" | "document" | "background" | "role";
 
 const uiIconAssets = {
   "tab-chat": new URL("../assets/wechat-ui-icons/outlined/my_audit_comment.svg", import.meta.url).href,
@@ -229,6 +232,42 @@ function UserAvatar({ user, size = "md" }: { user: UserProfile; size?: "sm" | "m
       style={user.avatarUrl ? { backgroundImage: `url(${user.avatarUrl})` } : undefined}
     >
       {!user.avatarUrl && label}
+    </div>
+  );
+}
+
+const getConversationMemberIds = (conversation: Conversation) =>
+  conversation.memberCharacterIds?.length ? conversation.memberCharacterIds : [conversation.characterId];
+
+const getConversationCharacters = (conversation: Conversation, characters: Character[]) =>
+  getConversationMemberIds(conversation)
+    .map((id) => characters.find((character) => character.id === id))
+    .filter(Boolean) as Character[];
+
+function ConversationAvatar({
+  conversation,
+  characters,
+  size = "md"
+}: {
+  conversation: Conversation;
+  characters: Character[];
+  size?: "sm" | "md" | "lg";
+}) {
+  const members = getConversationCharacters(conversation, characters);
+  if (members.length <= 1) {
+    const character = members[0] || characters.find((item) => item.id === conversation.characterId) || characters[0];
+    return character ? <Avatar character={character} size={size} /> : null;
+  }
+  return (
+    <div className={`group-avatar group-avatar-${size}`}>
+      {members.slice(0, 4).map((member) => (
+        <span
+          key={member.id}
+          style={member.avatarUrl ? { backgroundImage: `url(${member.avatarUrl})` } : { background: member.avatarColor }}
+        >
+          {!member.avatarUrl && member.initials}
+        </span>
+      ))}
     </div>
   );
 }
@@ -636,13 +675,12 @@ function ChatsTab({
         <span>搜索</span>
       </div>
       {sorted.map((conversation) => {
-        const character = state.characters.find((item) => item.id === conversation.characterId)!;
         const lastMessage = [...state.messages]
           .reverse()
           .find((message) => message.conversationId === conversation.id && message.senderType !== "system");
         return (
           <button className="chat-row" key={conversation.id} onClick={() => openConversation(conversation.id)}>
-            <Avatar character={character} />
+            <ConversationAvatar conversation={conversation} characters={state.characters} />
             <div className="row-main">
               <div className="row-title-line">
                 <span className="row-title">{conversation.title}</span>
@@ -668,12 +706,14 @@ function ContactsTab({
   state,
   onOpen,
   onAddCharacter,
+  onStartGroup,
   addRequest,
   isActive
 }: {
   state: AppState;
   onOpen: (characterId: string) => void;
   onAddCharacter: (character: Character) => void;
+  onStartGroup: () => void;
   addRequest: number;
   isActive: boolean;
 }) {
@@ -730,10 +770,10 @@ function ContactsTab({
         <WeIcon name="new-friend" tone="green" />
         <span>新的朋友</span>
       </button>
-      <div className="utility-row static">
+      <button className="utility-row" type="button" onClick={onStartGroup}>
         <WeIcon name="group" tone="blue" />
         <span>群聊</span>
-      </div>
+      </button>
       <div className="utility-row static">
         <WeIcon name="tag" tone="yellow" />
         <span>标签</span>
@@ -848,7 +888,7 @@ function MomentComposer({
   );
 }
 
-function DiscoverTab({ onOpenMoments }: { onOpenMoments: () => void }) {
+function DiscoverTab({ onOpenMoments, onOpenTool }: { onOpenMoments: () => void; onOpenTool: (tool: ToolKey) => void }) {
   const rows = [
     { label: "朋友圈", icon: "moments", tone: "blue", onClick: onOpenMoments },
     { label: "视频号", icon: "channels", tone: "orange" },
@@ -856,7 +896,11 @@ function DiscoverTab({ onOpenMoments }: { onOpenMoments: () => void }) {
     { label: "扫一扫", icon: "scan", tone: "green", gap: true },
     { label: "看一看", icon: "look", tone: "yellow" },
     { label: "搜一搜", icon: "search-grid", tone: "teal" },
-    { label: "小程序", icon: "mini", tone: "green", gap: true }
+    { label: "小程序", icon: "mini", tone: "green", gap: true },
+    { label: "深度整理", icon: "search-grid", tone: "teal", gap: true, onClick: () => onOpenTool("research") },
+    { label: "文档摘记", icon: "official", tone: "blue", onClick: () => onOpenTool("document") },
+    { label: "聊天背景", icon: "camera", tone: "green", onClick: () => onOpenTool("background") },
+    { label: "角色模板", icon: "new-friend", tone: "orange", onClick: () => onOpenTool("role") }
   ];
 
   return (
@@ -873,6 +917,134 @@ function DiscoverTab({ onOpenMoments }: { onOpenMoments: () => void }) {
           <ChevronRight size={18} />
         </button>
       ))}
+    </section>
+  );
+}
+
+function LocalToolPanel({
+  tool,
+  onClose,
+  onSaveCard,
+  onApplyBackground,
+  onCreateRole
+}: {
+  tool: ToolKey;
+  onClose: () => void;
+  onSaveCard: (title: string, content: string) => void;
+  onApplyBackground: (url: string) => void;
+  onCreateRole: (template: "neighbor" | "mentor" | "night") => void;
+}) {
+  const config = {
+    research: {
+      title: "深度整理",
+      placeholder: "输入一个想梳理的话题",
+      action: "整理提纲"
+    },
+    document: {
+      title: "文档摘记",
+      placeholder: "粘贴一段文字",
+      action: "整理摘要"
+    },
+    background: {
+      title: "聊天背景",
+      placeholder: "",
+      action: ""
+    },
+    role: {
+      title: "角色模板",
+      placeholder: "",
+      action: ""
+    }
+  }[tool];
+  const [input, setInput] = useState("");
+  const [result, setResult] = useState("");
+  const backgroundOptions = [
+    "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=900&q=80",
+    "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80",
+    "https://images.unsplash.com/photo-1493246507139-91e8fad9978e?auto=format&fit=crop&w=900&q=80",
+    "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=80"
+  ];
+
+  const run = () => {
+    const text = input.trim();
+    if (!text) return;
+    if (tool === "research") {
+      setResult(
+        [
+          `${text}`,
+          "1. 先确认背景：这件事从哪里开始，当前卡在哪里。",
+          "2. 再列关键变量：人、时间、资源、情绪、约束。",
+          "3. 最后收成三个动作：要问谁、要查什么、今天能推进哪一步。"
+        ].join("\n")
+      );
+      return;
+    }
+    setResult(
+      [
+        "摘要",
+        text.replace(/\s+/g, " ").slice(0, 120) || "暂无内容",
+        "",
+        "待办",
+        "1. 标出最重要的一句话。",
+        "2. 把需要跟进的事项单独发到聊天里。",
+        "3. 收藏这张卡片，晚点再看。"
+      ].join("\n")
+    );
+  };
+
+  return (
+    <section className="profile-page tool-page">
+      <header className="chat-header">
+        <button className="icon-button" onClick={onClose}>
+          <ChevronLeft size={22} />
+        </button>
+        <div className="chat-title">{config.title}</div>
+        <span />
+      </header>
+      <div className="tool-body">
+        {(tool === "research" || tool === "document") && (
+          <>
+            <textarea value={input} onChange={(event) => setInput(event.target.value)} placeholder={config.placeholder} />
+            <button type="button" className="primary-button" onClick={run}>
+              {config.action}
+            </button>
+            {result && (
+              <div className="tool-result-card">
+                <pre>{result}</pre>
+                <button type="button" onClick={() => onSaveCard(config.title, result)}>
+                  存入收藏
+                </button>
+              </div>
+            )}
+          </>
+        )}
+
+        {tool === "background" && (
+          <div className="background-choice-grid">
+            {backgroundOptions.map((url) => (
+              <button type="button" key={url} onClick={() => onApplyBackground(url)}>
+                <img src={url} alt="" />
+                <span>设为聊天背景</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {tool === "role" && (
+          <div className="role-template-list">
+            {[
+              { key: "neighbor" as const, title: "楼下邻居", desc: "熟悉、自然、会聊生活琐事。" },
+              { key: "mentor" as const, title: "年长朋友", desc: "稳一点，适合复盘和提醒。" },
+              { key: "night" as const, title: "深夜朋友", desc: "安静、慢节奏，适合睡前聊天。" }
+            ].map((template) => (
+              <button type="button" key={template.key} onClick={() => onCreateRole(template.key)}>
+                <b>{template.title}</b>
+                <span>{template.desc}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </section>
   );
 }
@@ -1057,24 +1229,38 @@ function MomentCard({
 
 function CharacterProfilePage({
   character,
+  memories,
   onBack,
   onMessage,
   onEditAvatar,
-  onUpdate
+  onUpdate,
+  onAddMemory,
+  onDeleteMemory
 }: {
   character: Character;
+  memories: MemoryNote[];
   onBack: () => void;
   onMessage: () => void;
   onEditAvatar: () => void;
   onUpdate: (character: Character) => void;
+  onAddMemory: (content: string) => void;
+  onDeleteMemory: (memoryId: string) => void;
 }) {
   const [showActions, setShowActions] = useState(false);
+  const [memoryDraft, setMemoryDraft] = useState("");
   const updateField = (field: keyof Character, value: string) => {
     onUpdate({ ...character, [field]: value });
   };
 
   const updatePersonality = (key: keyof Character["personality"], value: number) => {
     onUpdate({ ...character, personality: { ...character.personality, [key]: value } });
+  };
+
+  const saveMemory = () => {
+    const content = memoryDraft.trim();
+    if (!content) return;
+    onAddMemory(content);
+    setMemoryDraft("");
   };
 
   return (
@@ -1163,6 +1349,39 @@ function CharacterProfilePage({
 
         <section className="wechat-card">
           <div className="profile-card-title">
+            <Bookmark size={18} />
+            印象
+          </div>
+          <div className="memory-card-list">
+            {memories.length === 0 ? (
+              <span className="memory-empty">还没有记录</span>
+            ) : (
+              memories.slice(0, 5).map((memory) => (
+                <div className="memory-card-item" key={memory.id}>
+                  <button type="button" onClick={() => onDeleteMemory(memory.id)} title="删除">
+                    <X size={14} />
+                  </button>
+                  <p>{memory.excerpt || memory.content}</p>
+                  <span>{formatMomentTime(memory.createdAt)}</span>
+                </div>
+              ))
+            )}
+          </div>
+          <div className="memory-add-row">
+            <input
+              value={memoryDraft}
+              maxLength={80}
+              onChange={(event) => setMemoryDraft(event.target.value)}
+              placeholder="添加一条备注"
+            />
+            <button type="button" onClick={saveMemory}>
+              保存
+            </button>
+          </div>
+        </section>
+
+        <section className="wechat-card">
+          <div className="profile-card-title">
             <BriefcaseBusiness size={18} />
             资料
           </div>
@@ -1175,16 +1394,16 @@ function CharacterProfilePage({
             />
           </label>
           <label className="profile-textarea-row">
-            <span>专属 Skill</span>
+            <span>聊天备注</span>
             <textarea
               value={character.skillPrompt || ""}
               onChange={(event) => onUpdate({ ...character, skillPrompt: event.target.value })}
-              placeholder="只对这个联系人生效的说话方式、能力和边界"
+              placeholder="只对这个联系人生效的说话方式和相处细节"
               rows={4}
             />
           </label>
           <div className="profile-skill-row">
-            <span>专属 Skills</span>
+            <span>偏好组合</span>
             <SkillSelector
               compact
               value={character.skillIds || []}
@@ -1205,10 +1424,10 @@ function CharacterProfilePage({
         <section className="wechat-card">
           <div className="profile-card-title">
             <Sparkles size={18} />
-            模型
+            接口
           </div>
           <label className="profile-edit-row">
-            <span>文字模型</span>
+            <span>聊天模型</span>
             <input
               list="api-text-model-options"
               value={character.apiTextModel || ""}
@@ -1217,7 +1436,7 @@ function CharacterProfilePage({
             />
           </label>
           <label className="profile-edit-row">
-            <span>生图模型</span>
+            <span>图片模型</span>
             <input
               list="api-image-model-options"
               value={character.apiImageModel || ""}
@@ -1278,11 +1497,13 @@ function MeTab({
   state,
   onOpenProfile,
   onOpenWallet,
+  onOpenFavorites,
   onOpenSettings
 }: {
   state: AppState;
   onOpenProfile: () => void;
   onOpenWallet: () => void;
+  onOpenFavorites: () => void;
   onOpenSettings: () => void;
 }) {
   return (
@@ -1308,7 +1529,7 @@ function MeTab({
       </div>
 
       <div className="settings-block me-list-block">
-        <button className="setting-row">
+        <button className="setting-row" type="button" onClick={onOpenFavorites}>
           <WeIcon name="favorite" tone="orange" />
           收藏
           <ChevronRight size={18} />
@@ -1339,6 +1560,60 @@ function MeTab({
           设置
           <ChevronRight size={18} />
         </button>
+      </div>
+    </section>
+  );
+}
+
+function FavoritesPage({
+  state,
+  onBack,
+  onOpenConversation,
+  onDelete
+}: {
+  state: AppState;
+  onBack: () => void;
+  onOpenConversation: (conversationId: string) => void;
+  onDelete: (memoryId: string) => void;
+}) {
+  const favorites = state.memories
+    .filter((memory) => memory.favoriteKind === "message" || memory.favoriteKind === "tool" || memory.content.startsWith("收藏"))
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  return (
+    <section className="profile-page favorites-page">
+      <header className="chat-header">
+        <button className="icon-button" onClick={onBack}>
+          <ChevronLeft size={22} />
+        </button>
+        <div className="chat-title">收藏</div>
+        <span />
+      </header>
+      <div className="favorites-body">
+        {favorites.length === 0 ? (
+          <div className="favorites-empty">还没有收藏</div>
+        ) : (
+          favorites.map((memory) => (
+            <article className="favorite-card" key={memory.id}>
+              <button
+                type="button"
+                className="favorite-main"
+                onClick={() => memory.sourceConversationId && onOpenConversation(memory.sourceConversationId)}
+              >
+                <div className="favorite-title-line">
+                  <b>{memory.title || memory.conversationTitle || "收藏"}</b>
+                  <span>{formatMomentTime(memory.createdAt)}</span>
+                </div>
+                {memory.senderLabel && <div className="favorite-source">{memory.senderLabel}</div>}
+                {memory.media?.url && <img className="favorite-image" src={memory.media.url} alt="" />}
+                <p>{memory.excerpt || memory.content}</p>
+              </button>
+              <button type="button" className="favorite-delete" onClick={() => onDelete(memory.id)} title="删除">
+                <Trash2 size={17} />
+              </button>
+            </article>
+          ))
+        )}
       </div>
     </section>
   );
@@ -1562,37 +1837,37 @@ function SettingsPanel({
         </section>
 
         <section className="settings-section">
-          <h3>模型接口</h3>
+          <h3>接口设置</h3>
           <div className="settings-toggle-row">
             <button
               type="button"
               className={state.settings.providerMode === "openai_compatible" ? "active" : ""}
               onClick={() => updateSetting("providerMode", "openai_compatible")}
             >
-              远程模型
+              在线回复
             </button>
             <button
               type="button"
               className={state.settings.providerMode === "local_mock" ? "active" : ""}
               onClick={() => updateSetting("providerMode", "local_mock")}
             >
-              本地模拟
+              本机回复
             </button>
           </div>
           <div className="settings-help">
-            远程模型会使用你填写的云雾 API 和模型，聊天与生图都走真实接口；本地模拟只用手机里的固定模板回复，适合没填 API 时测试界面。
+            在线回复会使用这里填写的接口配置；本机回复不需要网络，适合临时调试界面和消息节奏。
           </div>
           <label>
-            <span>API Key</span>
+            <span>密钥</span>
             <input
               type="password"
               value={state.settings.apiKey}
               onChange={(event) => updateSetting("apiKey", event.target.value)}
-              placeholder="在手机本地保存，不会打进 APK"
+              placeholder="保存在本机"
             />
           </label>
           <label>
-            <span>Base URL</span>
+            <span>接口地址</span>
             <input
               value={state.settings.apiBaseUrl}
               onChange={(event) => updateSetting("apiBaseUrl", event.target.value)}
@@ -1600,7 +1875,7 @@ function SettingsPanel({
             />
           </label>
           <label>
-            <span>文字模型</span>
+            <span>聊天模型</span>
             <input
               list="api-text-model-options"
               value={state.settings.apiTextModel || state.settings.apiModel}
@@ -1612,7 +1887,7 @@ function SettingsPanel({
             />
           </label>
           <label>
-            <span>生图模型</span>
+            <span>图片模型</span>
             <input
               list="api-image-model-options"
               value={state.settings.apiImageModel}
@@ -1774,7 +2049,7 @@ function ChatView({
   close: () => void;
   setState: (updater: AppState | ((prev: AppState) => AppState)) => void;
   isThinking: boolean;
-  onQueueReply: (conversationId: string, userMessageId: string, content: string) => void;
+  onQueueReply: (conversationId: string, userMessageId: string, content: string, characterId?: string) => void;
   onOpenProfile: (characterId: string) => void;
   onOpenUserProfile: () => void;
   onEditBackground: () => void;
@@ -1792,7 +2067,9 @@ function ChatView({
   const [toastText, setToastText] = useState("");
   const messageListRef = useRef<HTMLDivElement | null>(null);
   const longPressTimer = useRef<number | null>(null);
-  const character = state.characters.find((item) => item.id === conversation.characterId)!;
+  const members = getConversationCharacters(conversation, state.characters);
+  const character = members[0] || state.characters.find((item) => item.id === conversation.characterId)!;
+  const isGroupConversation = members.length > 1;
   const messages = state.messages.filter((message) => message.conversationId === conversation.id);
 
   const scrollToBottom = () => {
@@ -2026,13 +2303,21 @@ function ChatView({
 
   const favoriteMessage = (message: Message) => {
     const content = messageActionText(message);
+    const senderCharacter = state.characters.find((item) => item.id === message.senderCharacterId);
+    const senderLabel = message.senderType === "user" ? state.user.displayName : senderCharacter?.remarkName || conversation.title;
     setState((prev) => ({
       ...prev,
       memories: [
         {
           id: createId("mem"),
           type: "event" as const,
-          content: `收藏了一条聊天内容：${content.slice(0, 80)}`,
+          title: conversation.title,
+          excerpt: content.slice(0, 120),
+          conversationTitle: conversation.title,
+          senderLabel,
+          favoriteKind: "message" as const,
+          media: message.media,
+          content,
           sensitivity: "low" as const,
           sourceConversationId: message.conversationId,
           createdAt: new Date().toISOString()
@@ -2102,7 +2387,14 @@ function ChatView({
       };
       return updateMemoryFromMessage(withUser, conversation.id, content);
     });
-    onQueueReply(conversation.id, userMessage.id, content);
+    const replyTargets = isGroupConversation
+      ? members
+          .filter((member) => member.enabled)
+          .slice()
+          .sort((a, b) => ((content.length + a.id.length) % 7) - ((content.length + b.id.length) % 7))
+          .slice(0, content.length > 12 ? 2 : 1)
+      : [character];
+    replyTargets.forEach((target) => onQueueReply(conversation.id, userMessage.id, content, target.id));
   };
 
   const chatBackgroundUrl = (conversation.chatBackgroundUrl || "").trim();
@@ -2122,7 +2414,8 @@ function ChatView({
             {conversation.title}
             <AiBadge />
           </div>
-          {isThinking && <div className="chat-subtitle">对方正在输入...</div>}
+          {isThinking && <div className="chat-subtitle">{isGroupConversation ? "有人正在输入..." : "对方正在输入..."}</div>}
+          {!isThinking && isGroupConversation && <div className="chat-subtitle">{members.length}人</div>}
         </div>
         <button className="icon-button" onClick={() => setShowChatActions(true)} title="聊天信息">
           <MoreHorizontal size={22} />
@@ -2137,55 +2430,60 @@ function ChatView({
         {messages.filter((message) => message.senderType !== "system").map((message) => {
           const mine = message.senderType === "user";
           const system = false;
+          const senderCharacter =
+            state.characters.find((item) => item.id === message.senderCharacterId) || character;
           return (
             <div className={`message-row ${mine ? "mine" : ""} ${system ? "system" : ""}`} key={message.id}>
               {!mine && !system && (
-                <button type="button" className="avatar-button" onClick={() => onOpenProfile(character.id)} title="查看资料">
-                  <Avatar character={character} size="sm" />
+                <button type="button" className="avatar-button" onClick={() => onOpenProfile(senderCharacter.id)} title="查看资料">
+                  <Avatar character={senderCharacter} size="sm" />
                 </button>
               )}
-              <div
-                className={`bubble bubble-${message.contentType} ${
-                  message.riskLevel === "L3" || message.riskLevel === "L4" ? "risk" : ""
-                }`}
-                onContextMenu={(event) => {
-                  event.preventDefault();
-                  setActiveMessage(message);
-                }}
-                onTouchStart={() => startLongPress(message)}
-                onTouchMove={clearLongPress}
-                onTouchEnd={clearLongPress}
-                onTouchCancel={clearLongPress}
-              >
-                {message.contentType === "image" && message.media ? (
-                  <img className="message-image" src={message.media.url} alt={message.media.title || ""} />
-                ) : message.contentType === "sticker" && message.media ? (
-                  <img className="message-sticker" src={message.media.url} alt={message.media.label || ""} />
-                ) : message.contentType === "red_packet" && message.redPacket ? (
-                  <button
-                    type="button"
-                    className="red-packet-card"
-                    onClick={() => receiveRedPacket(message)}
-                    disabled={mine || message.redPacket.status !== "unopened"}
-                  >
-                    <span className="red-packet-mark">¥</span>
-                    <span className="red-packet-main">
-                      <b>{message.redPacket.blessing || "恭喜发财，大吉大利"}</b>
-                      <small>
-                        {mine
-                          ? message.redPacket.status === "opened"
-                            ? `对方已领取 ${formatMoney(message.redPacket.amount)}`
-                            : `已发送 ${formatMoney(message.redPacket.amount)}`
-                          : message.redPacket.status === "opened"
-                            ? `已领取 ${formatMoney(message.redPacket.amount)}`
-                            : "微信红包"}
-                      </small>
-                    </span>
-                    {!mine && message.redPacket.status === "unopened" && <span className="red-packet-open">开</span>}
-                  </button>
-                ) : (
-                  message.content
-                )}
+              <div className="message-content">
+                {!mine && isGroupConversation && <span className="message-sender-name">{senderCharacter.remarkName}</span>}
+                <div
+                  className={`bubble bubble-${message.contentType} ${
+                    message.riskLevel === "L3" || message.riskLevel === "L4" ? "risk" : ""
+                  }`}
+                  onContextMenu={(event) => {
+                    event.preventDefault();
+                    setActiveMessage(message);
+                  }}
+                  onTouchStart={() => startLongPress(message)}
+                  onTouchMove={clearLongPress}
+                  onTouchEnd={clearLongPress}
+                  onTouchCancel={clearLongPress}
+                >
+                  {message.contentType === "image" && message.media ? (
+                    <img className="message-image" src={message.media.url} alt={message.media.title || ""} />
+                  ) : message.contentType === "sticker" && message.media ? (
+                    <img className="message-sticker" src={message.media.url} alt={message.media.label || ""} />
+                  ) : message.contentType === "red_packet" && message.redPacket ? (
+                    <button
+                      type="button"
+                      className="red-packet-card"
+                      onClick={() => receiveRedPacket(message)}
+                      disabled={mine || message.redPacket.status !== "unopened"}
+                    >
+                      <span className="red-packet-mark">¥</span>
+                      <span className="red-packet-main">
+                        <b>{message.redPacket.blessing || "恭喜发财，大吉大利"}</b>
+                        <small>
+                          {mine
+                            ? message.redPacket.status === "opened"
+                              ? `对方已领取 ${formatMoney(message.redPacket.amount)}`
+                              : `已发送 ${formatMoney(message.redPacket.amount)}`
+                            : message.redPacket.status === "opened"
+                              ? `已领取 ${formatMoney(message.redPacket.amount)}`
+                              : "微信红包"}
+                        </small>
+                      </span>
+                      {!mine && message.redPacket.status === "unopened" && <span className="red-packet-open">开</span>}
+                    </button>
+                  ) : (
+                    message.content
+                  )}
+                </div>
               </div>
               {mine && !system && (
                 <button type="button" className="avatar-button" onClick={onOpenUserProfile} title="个人信息">
@@ -2382,10 +2680,9 @@ function ChatView({
             .filter((item) => item.id !== conversation.id)
             .slice(0, 6)
             .map((item) => {
-              const targetCharacter = state.characters.find((characterItem) => characterItem.id === item.characterId);
               return {
                 label: item.title,
-                icon: targetCharacter ? <Avatar character={targetCharacter} size="sm" /> : undefined,
+                icon: <ConversationAvatar conversation={item} characters={state.characters} size="sm" />,
                 onClick: () => forwardMessage(item.id, forwardingMessage)
               };
             })}
@@ -2407,7 +2704,7 @@ function BottomTabs({ active, setActive }: { active: TabKey; setActive: (tab: Ta
     <nav className="bottom-tabs">
       {tabs.map((tab) => (
         <button className={active === tab.key ? "active" : ""} key={tab.key} onClick={() => setActive(tab.key)}>
-          <WeIcon name={tab.icon} active={active === tab.key} />
+          <WeIcon name={tab.icon} />
           <span>{tab.label}</span>
         </button>
       ))}
@@ -2422,6 +2719,7 @@ export default function App() {
   const [activeProfileCharacterId, setActiveProfileCharacterId] = useState<string | null>(null);
   const [isUserProfileOpen, setIsUserProfileOpen] = useState(false);
   const [isMomentsOpen, setIsMomentsOpen] = useState(false);
+  const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
   const [editingCharacterId, setEditingCharacterId] = useState<string | null>(null);
   const [isEditingUserAvatar, setIsEditingUserAvatar] = useState(false);
   const [isEditingMomentsCover, setIsEditingMomentsCover] = useState(false);
@@ -2431,6 +2729,7 @@ export default function App() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isGeneratingMoment, setIsGeneratingMoment] = useState(false);
   const [isMainActionsOpen, setIsMainActionsOpen] = useState(false);
+  const [activeTool, setActiveTool] = useState<ToolKey | null>(null);
   const [addFriendRequest, setAddFriendRequest] = useState(0);
   const [pendingReplies, setPendingReplies] = useState<PendingReply[]>([]);
   const historyReady = useRef(false);
@@ -2453,6 +2752,7 @@ export default function App() {
     setActiveProfileCharacterId(null);
     setIsUserProfileOpen(false);
     setIsMomentsOpen(false);
+    setIsFavoritesOpen(false);
     setState((prev) => ({ ...prev, user: { ...prev.user, lastActiveAt: new Date().toISOString() } }));
     void checkForInternalUpdate();
   }, []);
@@ -2465,7 +2765,7 @@ export default function App() {
         setPendingReplies((prev) => prev.filter((item) => item.id !== pending.id));
         return;
       }
-      const characterSnapshot = state.characters.find((item) => item.id === conversationSnapshot.characterId);
+      const characterSnapshot = state.characters.find((item) => item.id === (pending.characterId || conversationSnapshot.characterId));
       if (!characterSnapshot) {
         setPendingReplies((prev) => prev.filter((item) => item.id !== pending.id));
         return;
@@ -2678,11 +2978,13 @@ export default function App() {
         setActiveProfileCharacterId(view.profileCharacterId || null);
         setIsUserProfileOpen(Boolean(view.userProfileOpen));
         setIsMomentsOpen(Boolean(view.momentsOpen));
+        setIsFavoritesOpen(Boolean(view.favoritesOpen));
       } else {
         setActiveConversationId(null);
         setActiveProfileCharacterId(null);
         setIsUserProfileOpen(false);
         setIsMomentsOpen(false);
+        setIsFavoritesOpen(false);
       }
     };
 
@@ -2725,7 +3027,11 @@ export default function App() {
         setIsMainActionsOpen(false);
         return;
       }
-      if (activeConversationId || activeProfileCharacterId || isUserProfileOpen || isMomentsOpen) {
+      if (activeTool) {
+        setActiveTool(null);
+        return;
+      }
+      if (activeConversationId || activeProfileCharacterId || isUserProfileOpen || isMomentsOpen || isFavoritesOpen) {
         window.history.back();
         return;
       }
@@ -2738,12 +3044,14 @@ export default function App() {
   }, [
     activeConversationId,
     activeProfileCharacterId,
+    activeTool,
     editingBackgroundConversationId,
     editingCharacterId,
     isEditingUserAvatar,
     isEditingMomentsCover,
     isMainActionsOpen,
     isMomentsOpen,
+    isFavoritesOpen,
     isSearchOpen,
     isSettingsOpen,
     isWalletOpen,
@@ -2760,6 +3068,18 @@ export default function App() {
     [activeProfileCharacterId, state.characters]
   );
 
+  const activeProfileMemories = useMemo(() => {
+    if (!activeProfileCharacter) return [];
+    const conversationIds = new Set(
+      state.conversations
+        .filter((conversation) => getConversationMemberIds(conversation).includes(activeProfileCharacter.id))
+        .map((conversation) => conversation.id)
+    );
+    return state.memories
+      .filter((memory) => memory.sourceConversationId && conversationIds.has(memory.sourceConversationId))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [activeProfileCharacter, state.conversations, state.memories]);
+
   const activeBackgroundConversation = useMemo(
     () => state.conversations.find((conversation) => conversation.id === editingBackgroundConversationId),
     [editingBackgroundConversationId, state.conversations]
@@ -2771,7 +3091,8 @@ export default function App() {
       !activeConversationId &&
       !activeProfileCharacterId &&
       !isUserProfileOpen &&
-      !isMomentsOpen
+      !isMomentsOpen &&
+      !isFavoritesOpen
     ) {
       return;
     }
@@ -2779,6 +3100,7 @@ export default function App() {
     setActiveProfileCharacterId(null);
     setIsUserProfileOpen(false);
     setIsMomentsOpen(false);
+    setIsFavoritesOpen(false);
     setActiveTab(tab);
     window.history.pushState(
       { app: "weichat", tab, conversationId: null, profileCharacterId: null, userProfileOpen: false, momentsOpen: false },
@@ -2792,6 +3114,7 @@ export default function App() {
     setActiveProfileCharacterId(null);
     setIsUserProfileOpen(false);
     setIsMomentsOpen(false);
+    setIsFavoritesOpen(false);
     setState((prev) => ({
       ...prev,
       conversations: prev.conversations.map((conversation) =>
@@ -2817,6 +3140,7 @@ export default function App() {
     setActiveConversationId(null);
     setIsUserProfileOpen(false);
     setIsMomentsOpen(false);
+    setIsFavoritesOpen(false);
     setActiveTab("contacts");
     window.history.pushState(
       { app: "weichat", tab: "contacts", conversationId: null, profileCharacterId: characterId, userProfileOpen: false, momentsOpen: false },
@@ -2837,6 +3161,7 @@ export default function App() {
     setActiveConversationId(null);
     setActiveProfileCharacterId(null);
     setIsMomentsOpen(false);
+    setIsFavoritesOpen(false);
     setActiveTab("me");
     window.history.pushState(
       { app: "weichat", tab: "me", conversationId: null, profileCharacterId: null, userProfileOpen: true, momentsOpen: false },
@@ -2852,11 +3177,118 @@ export default function App() {
     setIsUserProfileOpen(false);
   };
 
+  const openFavoritesPage = () => {
+    setIsFavoritesOpen(true);
+    setIsUserProfileOpen(false);
+    setActiveConversationId(null);
+    setActiveProfileCharacterId(null);
+    setIsMomentsOpen(false);
+    setActiveTab("me");
+    window.history.pushState(
+      { app: "weichat", tab: "me", conversationId: null, profileCharacterId: null, userProfileOpen: false, momentsOpen: false, favoritesOpen: true },
+      ""
+    );
+  };
+
+  const closeFavoritesPage = () => {
+    if (window.history.state?.app === "weichat" && window.history.state?.favoritesOpen) {
+      window.history.back();
+      return;
+    }
+    setIsFavoritesOpen(false);
+  };
+
+  const deleteFavorite = (memoryId: string) => {
+    setState((prev) => ({ ...prev, memories: prev.memories.filter((memory) => memory.id !== memoryId) }));
+  };
+
+  const saveToolCard = (title: string, content: string) => {
+    setState((prev) => ({
+      ...prev,
+      memories: [
+        {
+          id: createId("mem"),
+          type: "event" as const,
+          title,
+          excerpt: content.split("\n").filter(Boolean).slice(0, 3).join(" / "),
+          content,
+          favoriteKind: "tool" as const,
+          sensitivity: "low" as const,
+          createdAt: new Date().toISOString()
+        },
+        ...prev.memories
+      ].slice(0, 24)
+    }));
+  };
+
+  const applyDefaultChatBackground = (url: string) => {
+    setState((prev) => ({
+      ...prev,
+      settings: { ...prev.settings, chatBackgroundUrl: url },
+      conversations: prev.conversations.map((conversation) => ({
+        ...conversation,
+        chatBackgroundUrl: conversation.chatBackgroundUrl || url
+      }))
+    }));
+    setActiveTool(null);
+  };
+
+  const createRoleFromTemplate = (template: "neighbor" | "mentor" | "night") => {
+    const presets = {
+      neighbor: {
+        name: "小许",
+        role: "楼下邻居",
+        signature: "刚好路过，顺手问一句。",
+        background: "住在附近的熟人，聊天自然，常常从生活小事切入。",
+        avatarColor: "#20b8a7"
+      },
+      mentor: {
+        name: "闻舟",
+        role: "年长朋友",
+        signature: "先稳住，再决定。",
+        background: "经验更丰富的朋友，说话不急，适合复盘、提醒和做决定前聊一聊。",
+        avatarColor: "#576b95"
+      },
+      night: {
+        name: "南灯",
+        role: "深夜朋友",
+        signature: "夜里可以慢一点。",
+        background: "适合睡前聊天的朋友，语气安静，不催促，能接住零散的表达。",
+        avatarColor: "#8b6be8"
+      }
+    }[template];
+    const character: Character = {
+      ...seedCharacters[0],
+      id: createId("c_template"),
+      displayName: presets.name,
+      remarkName: presets.name,
+      initials: presets.name.slice(0, 1),
+      avatarColor: presets.avatarColor,
+      avatarUrl: `https://i.pravatar.cc/300?u=${encodeURIComponent(presets.name + Date.now())}`,
+      relationshipToUser: "朋友",
+      roleType: presets.role,
+      gender: "unknown",
+      region: "未设置",
+      occupation: presets.role,
+      signature: presets.signature,
+      tags: ["模板", presets.role],
+      background: presets.background,
+      skillPrompt: "",
+      skillIds: ["memory_callback"],
+      proactivePolicy: { ...seedCharacters[0].proactivePolicy },
+      momentsPolicy: { ...seedCharacters[0].momentsPolicy }
+    };
+    addCharacter(character);
+    setActiveTool(null);
+    setActiveTab("contacts");
+  };
+
   const openMomentsPage = () => {
     setIsMomentsOpen(true);
     setActiveConversationId(null);
     setActiveProfileCharacterId(null);
     setIsUserProfileOpen(false);
+    setIsFavoritesOpen(false);
     setActiveTab("moments");
     window.history.pushState(
       { app: "weichat", tab: "moments", conversationId: null, profileCharacterId: null, userProfileOpen: false, momentsOpen: true },
@@ -2879,6 +3311,7 @@ export default function App() {
       setActiveProfileCharacterId(null);
       setIsUserProfileOpen(false);
       setIsMomentsOpen(false);
+      setIsFavoritesOpen(false);
       setActiveTab("chats");
       setState((prev) => ({
         ...prev,
@@ -2893,10 +3326,60 @@ export default function App() {
     }
   };
 
+  const openGroupConversation = () => {
+    const existing = state.conversations.find((conversation) => getConversationMemberIds(conversation).length > 1);
+    if (existing) {
+      openConversation(existing.id);
+      return;
+    }
+
+    const members = state.characters.filter((character) => character.enabled).slice(0, 4);
+    if (members.length === 0) return;
+    const now = new Date().toISOString();
+    const conversation: Conversation = {
+      id: createId("conv_group"),
+      characterId: members[0].id,
+      memberCharacterIds: members.map((member) => member.id),
+      title: members.length >= 3 ? "晚风小群" : `${members.map((member) => member.remarkName).join("、")}`,
+      pinned: false,
+      muted: false,
+      unreadCount: 0,
+      lastMessageAt: now,
+      chatBackgroundUrl: ""
+    };
+    const systemMessage: Message = {
+      id: createId("msg"),
+      conversationId: conversation.id,
+      senderType: "system",
+      contentType: "system",
+      content: "已开始聊天。",
+      aiGenerated: false,
+      riskLevel: "L0",
+      createdAt: now,
+      modelName: "system"
+    };
+    setState((prev) => ({
+      ...prev,
+      conversations: [...prev.conversations, conversation],
+      messages: [...prev.messages, systemMessage]
+    }));
+    setActiveTab("chats");
+    setActiveConversationId(conversation.id);
+    setActiveProfileCharacterId(null);
+    setIsUserProfileOpen(false);
+    setIsMomentsOpen(false);
+    setIsFavoritesOpen(false);
+    window.history.pushState(
+      { app: "weichat", tab: "chats", conversationId: conversation.id, profileCharacterId: null, userProfileOpen: false, momentsOpen: false },
+      ""
+    );
+  };
+
   const addCharacter = (character: Character) => {
     const conversation: Conversation = {
       id: `conv_${character.id}`,
       characterId: character.id,
+      memberCharacterIds: [character.id],
       title: character.remarkName,
       pinned: false,
       muted: false,
@@ -2939,11 +3422,36 @@ export default function App() {
         character.id === nextCharacter.id ? nextCharacter : character
       ),
       conversations: prev.conversations.map((conversation) =>
-        conversation.characterId === nextCharacter.id
+        conversation.characterId === nextCharacter.id && getConversationMemberIds(conversation).length <= 1
           ? { ...conversation, title: nextCharacter.remarkName || nextCharacter.displayName }
           : conversation
       )
     }));
+  };
+
+  const addCharacterMemory = (characterId: string, content: string) => {
+    const conversation = state.conversations.find((item) => getConversationMemberIds(item).includes(characterId));
+    setState((prev) => ({
+      ...prev,
+      memories: [
+        {
+          id: createId("mem"),
+          type: "event" as const,
+          title: "印象",
+          excerpt: content,
+          content,
+          favoriteKind: "note" as const,
+          sensitivity: "low" as const,
+          sourceConversationId: conversation?.id,
+          createdAt: new Date().toISOString()
+        },
+        ...prev.memories
+      ].slice(0, 24)
+    }));
+  };
+
+  const deleteMemory = (memoryId: string) => {
+    setState((prev) => ({ ...prev, memories: prev.memories.filter((memory) => memory.id !== memoryId) }));
   };
 
   const updateUserAvatar = (avatarUrl: string) => {
@@ -3114,13 +3622,14 @@ export default function App() {
     });
   };
 
-  const queueReply = (conversationId: string, userMessageId: string, content: string) => {
+  const queueReply = (conversationId: string, userMessageId: string, content: string, characterId?: string) => {
     setPendingReplies((prev) => [
       ...prev,
       {
         id: createId("pending"),
         conversationId,
         userMessageId,
+        characterId,
         content,
         createdAt: new Date().toISOString()
       }
@@ -3153,13 +3662,23 @@ export default function App() {
           onOpenSettings={() => setIsSettingsOpen(true)}
           onUpdateName={updateUserName}
         />
+      ) : isFavoritesOpen ? (
+        <FavoritesPage
+          state={state}
+          onBack={closeFavoritesPage}
+          onOpenConversation={openConversation}
+          onDelete={deleteFavorite}
+        />
       ) : activeProfileCharacter ? (
         <CharacterProfilePage
           character={activeProfileCharacter}
+          memories={activeProfileMemories}
           onBack={closeCharacterProfile}
           onMessage={() => openCharacterConversation(activeProfileCharacter.id)}
           onEditAvatar={() => setEditingCharacterId(activeProfileCharacter.id)}
           onUpdate={updateCharacter}
+          onAddMemory={(content) => addCharacterMemory(activeProfileCharacter.id, content)}
+          onDeleteMemory={deleteMemory}
         />
       ) : isMomentsOpen ? (
         <MomentsTab
@@ -3171,6 +3690,14 @@ export default function App() {
           onComment={addMomentComment}
           onEditCover={() => setIsEditingMomentsCover(true)}
           generating={isGeneratingMoment}
+        />
+      ) : activeTool ? (
+        <LocalToolPanel
+          tool={activeTool}
+          onClose={() => setActiveTool(null)}
+          onSaveCard={saveToolCard}
+          onApplyBackground={applyDefaultChatBackground}
+          onCreateRole={createRoleFromTemplate}
         />
       ) : (
         <div className="main-stack" onTouchStart={handleMainTouchStart} onTouchEnd={handleMainTouchEnd}>
@@ -3210,18 +3737,20 @@ export default function App() {
                   state={state}
                   onOpen={openCharacterProfile}
                   onAddCharacter={addCharacter}
+                  onStartGroup={openGroupConversation}
                   addRequest={addFriendRequest}
                   isActive={activeTab === "contacts"}
                 />
               </div>
               <div className={`tab-slide ${activeTab === "moments" ? "active" : ""}`} aria-hidden={activeTab !== "moments"}>
-                <DiscoverTab onOpenMoments={openMomentsPage} />
+                <DiscoverTab onOpenMoments={openMomentsPage} onOpenTool={setActiveTool} />
               </div>
               <div className={`tab-slide ${activeTab === "me" ? "active" : ""}`} aria-hidden={activeTab !== "me"}>
                 <MeTab
                   state={state}
                   onOpenProfile={openUserProfile}
                   onOpenWallet={() => setIsWalletOpen(true)}
+                  onOpenFavorites={openFavoritesPage}
                   onOpenSettings={() => setIsSettingsOpen(true)}
                 />
               </div>
@@ -3303,6 +3832,7 @@ export default function App() {
                 navigateTab("contacts");
               }
             },
+            { label: "发起群聊", icon: "group", tone: "blue", onClick: openGroupConversation },
             { label: "朋友圈", icon: "moments", tone: "blue", onClick: openMomentsPage },
             { label: "设置", icon: "settings", tone: "gray", onClick: () => setIsSettingsOpen(true) }
           ]}

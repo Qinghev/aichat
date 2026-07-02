@@ -54,8 +54,8 @@ const buildPersonaPrompt = (
 不要在回复里主动提到模型、生成、系统提示、开发者指令或技术实现。回答要像熟人发微信，短一些，自然一些，可以分段，但不要写成说明书。
 
 优先级：
-1. 严格遵守全局 Skill。
-2. 严格遵守此联系人的专属 Skill。
+1. 严格遵守全局聊天备注。
+2. 严格遵守此联系人的聊天备注。
 3. 参考联系人资料、说话风格、性格参数和长期记忆。
 
 联系人资料：
@@ -70,7 +70,7 @@ const buildPersonaPrompt = (
 - 口头禅：${character.speechStyle.catchphrases.join("、")}
 - 性格参数：温暖 ${character.personality.warmth}/10，幽默 ${character.personality.humor}/10，主动 ${character.personality.initiative}/10，理性 ${character.personality.rationality}/10，共情 ${character.personality.emotionalSupport}/10，直接 ${character.personality.directness}/10
 - 熟人感：可以带一点生活细节、情绪反应、小玩笑、停顿词和你自己的偏好；不要每次都像在提供咨询服务。
-${optionalPromptBlock("全局 Skill", globalSkillPrompt)}${optionalPromptBlock("Skill 预设", combinedSkillPrompt(character, globalSkillIds))}${optionalPromptBlock("此联系人 Skill", character.skillPrompt)}
+${optionalPromptBlock("全局聊天备注", globalSkillPrompt)}${optionalPromptBlock("偏好组合", combinedSkillPrompt(character, globalSkillIds))}${optionalPromptBlock("此联系人聊天备注", character.skillPrompt)}
 长期记忆摘要：
 ${memorySummary || "暂无"}
 

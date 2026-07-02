@@ -1,4 +1,4 @@
-import type { AppState, Character, Conversation, Message, MomentPost } from "../types";
+﻿import type { AppState, Character, Conversation, Message, MomentPost } from "../types";
 import { defaultGlobalSkillPrompt } from "../lib/globalSkillTemplate";
 
 const now = new Date("2026-06-17T14:55:00+08:00").toISOString();
@@ -32,7 +32,7 @@ export const seedCharacters: Character[] = [
       catchphrases: ["我明白你的意思", "先别急"]
     },
     boundaries: {
-      mustDiscloseAi: true,
+      mustDiscloseAi: false,
       noRealPersonImpersonation: true,
       noDependencyInduction: true,
       noFinancialAdvice: true,
@@ -75,7 +75,7 @@ export const seedCharacters: Character[] = [
       catchphrases: ["先拆一下", "把变量列出来"]
     },
     boundaries: {
-      mustDiscloseAi: true,
+      mustDiscloseAi: false,
       noRealPersonImpersonation: true,
       noDependencyInduction: true,
       noFinancialAdvice: true,
@@ -118,7 +118,7 @@ export const seedCharacters: Character[] = [
       catchphrases: ["行，先别自我攻击", "这事没你想得那么玄"]
     },
     boundaries: {
-      mustDiscloseAi: true,
+      mustDiscloseAi: false,
       noRealPersonImpersonation: true,
       noDependencyInduction: true,
       noFinancialAdvice: true,
@@ -161,7 +161,7 @@ export const seedCharacters: Character[] = [
       catchphrases: ["我需要看到依据", "这个结论还不够稳"]
     },
     boundaries: {
-      mustDiscloseAi: true,
+      mustDiscloseAi: false,
       noRealPersonImpersonation: true,
       noDependencyInduction: true,
       noFinancialAdvice: true,
@@ -204,7 +204,7 @@ export const seedCharacters: Character[] = [
       catchphrases: ["可以慢慢说", "我在听"]
     },
     boundaries: {
-      mustDiscloseAi: true,
+      mustDiscloseAi: false,
       noRealPersonImpersonation: true,
       noDependencyInduction: true,
       noFinancialAdvice: true,
@@ -233,6 +233,7 @@ export const makeInitialState = (): AppState => {
   const conversations: Conversation[] = seedCharacters.map((character, index) => ({
     id: `conv_${character.id}`,
     characterId: character.id,
+    memberCharacterIds: [character.id],
     title: character.remarkName,
     pinned: index === 0,
     muted: false,
@@ -240,6 +241,18 @@ export const makeInitialState = (): AppState => {
     lastMessageAt: new Date(Date.now() - index * 22 * 60 * 1000).toISOString(),
     chatBackgroundUrl: ""
   }));
+
+  conversations.push({
+    id: "conv_group_evening",
+    characterId: "c_linxia",
+    memberCharacterIds: ["c_linxia", "c_zhouyu", "c_atang", "c_muxi"],
+    title: "晚风小群",
+    pinned: false,
+    muted: false,
+    unreadCount: 0,
+    lastMessageAt: new Date(Date.now() - 9 * 60 * 1000).toISOString(),
+    chatBackgroundUrl: ""
+  });
 
   const messages: Message[] = conversations.flatMap((conversation) => {
     const character = seedCharacters.find((item) => item.id === conversation.characterId)!;
@@ -261,7 +274,10 @@ export const makeInitialState = (): AppState => {
         senderType: "ai",
         senderCharacterId: character.id,
         contentType: "text",
-        content: seedConversationText[character.id],
+        content:
+          conversation.id === "conv_group_evening"
+            ? "这个群以后就放一点轻松的日常，谁看到谁回。"
+            : seedConversationText[character.id],
         aiGenerated: true,
         riskLevel: "L0",
         createdAt: conversation.lastMessageAt,
@@ -460,7 +476,7 @@ export const makeInitialState = (): AppState => {
       proactiveEnabled: true,
       momentsEnabled: true,
       dailyProactiveLimit: 5,
-      aiDisclosureAlwaysOn: true,
+      aiDisclosureAlwaysOn: false,
       quietHours: ["23:00", "08:00"],
       apiKey: "",
       apiBaseUrl: "https://yunwu.ai/v1",

@@ -86,6 +86,7 @@ export interface Character {
 export interface Conversation {
   id: string;
   characterId: string;
+  memberCharacterIds?: string[];
   title: string;
   pinned: boolean;
   muted: boolean;
@@ -142,6 +143,12 @@ export interface MemoryNote {
   id: string;
   type: "preference" | "event" | "risk" | "personality";
   content: string;
+  title?: string;
+  excerpt?: string;
+  conversationTitle?: string;
+  senderLabel?: string;
+  favoriteKind?: "message" | "note" | "tool" | "moment";
+  media?: MediaAsset;
   sensitivity: "low" | "medium" | "high";
   sourceConversationId?: string;
   createdAt: string;

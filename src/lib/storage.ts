@@ -28,6 +28,14 @@ const migrateState = (state: AppState): AppState => {
     media: (post.media || []).map((media, index) => normalizeMedia(media, index))
   }));
   const missingSeedMoments = initialState.moments.filter((post) => !existingMomentIds.has(post.id));
+  const existingConversationIds = new Set((state.conversations || []).map((conversation) => conversation.id));
+  const missingSeedConversations = initialState.conversations.filter(
+    (conversation) => conversation.memberCharacterIds && conversation.memberCharacterIds.length > 1 && !existingConversationIds.has(conversation.id)
+  );
+  const existingMessageIds = new Set((state.messages || []).map((message) => message.id));
+  const missingSeedMessages = initialState.messages.filter(
+    (message) => missingSeedConversations.some((conversation) => conversation.id === message.conversationId) && !existingMessageIds.has(message.id)
+  );
 
   return {
     ...state,
@@ -41,26 +49,43 @@ const migrateState = (state: AppState): AppState => {
         skillPrompt: character.skillPrompt || seedCharacter?.skillPrompt || "",
         skillIds: character.skillIds || seedCharacter?.skillIds || [],
         apiTextModel: character.apiTextModel || seedCharacter?.apiTextModel || "",
-        apiImageModel: character.apiImageModel || seedCharacter?.apiImageModel || ""
+        apiImageModel: character.apiImageModel || seedCharacter?.apiImageModel || "",
+        boundaries: {
+          ...(seedCharacter?.boundaries || character.boundaries),
+          ...character.boundaries,
+          mustDiscloseAi: false
+        }
       };
     }),
-    messages: state.messages.map((message) => ({
-      ...message,
-      media: message.media ? normalizeMedia(message.media, 0) : undefined,
-      redPacket: message.redPacket
-        ? {
-            amount: Number(message.redPacket.amount) || 0,
-            blessing: message.redPacket.blessing || message.content || "",
-            status: message.redPacket.status || "sent",
-            openedAt: message.redPacket.openedAt
-          }
-        : undefined
-    })),
-    conversations: state.conversations.map((conversation) => ({
-      ...conversation,
-      chatBackgroundUrl: conversation.chatBackgroundUrl || legacyChatBackgroundUrl || ""
-    })),
+    messages: [
+      ...state.messages.map((message) => ({
+        ...message,
+        media: message.media ? normalizeMedia(message.media, 0) : undefined,
+        redPacket: message.redPacket
+          ? {
+              amount: Number(message.redPacket.amount) || 0,
+              blessing: message.redPacket.blessing || message.content || "",
+              status: message.redPacket.status || "sent",
+              openedAt: message.redPacket.openedAt
+            }
+          : undefined
+      })),
+      ...missingSeedMessages
+    ],
+    conversations: [
+      ...state.conversations.map((conversation) => ({
+        ...conversation,
+        memberCharacterIds: conversation.memberCharacterIds?.length ? conversation.memberCharacterIds : [conversation.characterId],
+        chatBackgroundUrl: conversation.chatBackgroundUrl || legacyChatBackgroundUrl || ""
+      })),
+      ...missingSeedConversations
+    ],
     moments: [...migratedMoments, ...missingSeedMoments],
+    memories: (state.memories || []).map((memory) => ({
+      ...memory,
+      favoriteKind: memory.favoriteKind || (memory.type === "event" && memory.content.startsWith("收藏了") ? "message" : memory.favoriteKind),
+      media: memory.media ? normalizeMedia(memory.media, 0) : undefined
+    })),
     user: {
       ...state.user,
       avatarUrl: state.user.avatarUrl || initialState.user.avatarUrl || ""
@@ -96,6 +121,7 @@ export const loadAppState = (): AppState => {
     if (!state.settings.chatBackgroundUrl) state.settings.chatBackgroundUrl = "";
     if (!state.settings.momentsCoverUrl) state.settings.momentsCoverUrl = "";
     if (!state.settings.globalSkillIds) state.settings.globalSkillIds = [];
+    state.settings.aiDisclosureAlwaysOn = false;
     state = applyWeeklyWalletCredit(state);
     if (!state.settings.apiKey) state.settings.providerMode = "local_mock";
     return state;

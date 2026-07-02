@@ -1,9 +1,9 @@
 {
-    "versionCode":  18,
-    "versionName":  "2.7",
+    "versionCode":  19,
+    "versionName":  "2.8",
     "apkUrl":  "https://qinghev.github.io/aichat/AIChatSandbox-debug.apk",
-    "sha256":  "992BA87C3755F63681B695EBC94914FF7D397052011BEA73192965FE7491BEC9",
-    "notes":  "修复未读红点进入会话不清除；增强生图接口兼容性并在选图面板加入生成入口；扩展常用模型候选；支持每个联系人单独设置文字模型和生图模型。",
+    "sha256":  "4116079A2EFC88857B39C2E73CC4B2B2AA16DDACCEB8C84DF7B26C4789497567",
+    "notes":  "新增多角色群聊、收藏卡片、联系人印象和发现页工具入口；优化微信式图标布局与沉浸式设置文案。",
     "mandatory":  false,
-    "createdAt":  "2026-06-28T01:07:54Z"
+    "createdAt":  "2026-07-02T12:10:04Z"
 }
