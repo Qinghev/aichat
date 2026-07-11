@@ -154,6 +154,18 @@ export interface MemoryNote {
   createdAt: string;
 }
 
+export interface LifeEvent {
+  id: string;
+  type: "message" | "group" | "moment";
+  title: string;
+  preview: string;
+  characterIds: string[];
+  conversationId?: string;
+  momentId?: string;
+  createdAt: string;
+  seen: boolean;
+}
+
 export interface AuditEvent {
   id: string;
   eventType: "risk" | "admin_view" | "export" | "delete_request" | "consent_change";
@@ -209,6 +221,7 @@ export interface AppState {
   conversations: Conversation[];
   messages: Message[];
   moments: MomentPost[];
+  lifeEvents: LifeEvent[];
   memories: MemoryNote[];
   auditEvents: AuditEvent[];
   settings: Settings;
@@ -216,5 +229,7 @@ export interface AppState {
   counters: {
     todayProactiveCount: number;
     lastProactiveDate: string;
+    lastLifeRefreshAt?: string;
+    lifeStreamVersion?: number;
   };
 }

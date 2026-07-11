@@ -1,9 +1,9 @@
 {
-    "versionCode":  19,
-    "versionName":  "2.8",
+    "versionCode":  20,
+    "versionName":  "2.9",
     "apkUrl":  "https://qinghev.github.io/aichat/AIChatSandbox-debug.apk",
-    "sha256":  "4116079A2EFC88857B39C2E73CC4B2B2AA16DDACCEB8C84DF7B26C4789497567",
-    "notes":  "新增多角色群聊、收藏卡片、联系人印象和发现页工具入口；优化微信式图标布局与沉浸式设置文案。",
+    "sha256":  "A56E26519908B12E57CEA96098424AF72C8601E6F715AFD4D9950B11EFBFFF9E",
+    "notes":  "新增本地生活流和今日动态，联系人会在离开期间留下消息、群聊与朋友圈；头像和日常图片改为离线内置，并缩小桌面图标。",
     "mandatory":  false,
-    "createdAt":  "2026-07-02T12:10:04Z"
+    "createdAt":  "2026-07-11T16:57:30Z"
 }

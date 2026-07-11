@@ -1248,6 +1248,129 @@ body,
   color: #8f8f8f;
 }
 
+.today-feed {
+  margin: 0 0 8px;
+  background: #fff;
+  border-top: 1px solid #e5e5e5;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.today-feed-title {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.today-feed-title b {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.today-feed-title span {
+  color: #9a9a9a;
+  font-size: 12px;
+}
+
+.today-event {
+  width: 100%;
+  min-height: 55px;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 14px 7px 16px;
+  border: 0;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fff;
+  color: #111;
+  text-align: left;
+}
+
+.today-event:last-child {
+  border-bottom: 0;
+}
+
+.today-event:active {
+  background: #f3f3f3;
+}
+
+.today-event > svg {
+  color: #b5b5b5;
+}
+
+.today-event-mark {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.today-event-moment::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  position: absolute;
+  right: 0;
+  bottom: 1px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #07c160;
+}
+
+.today-mini-avatar {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid #fff;
+  border-radius: 5px;
+  background-position: center;
+  background-size: cover;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.today-event-group .today-mini-avatar {
+  width: 28px;
+  height: 28px;
+}
+
+.today-event-group .today-mini-avatar + .today-mini-avatar {
+  margin-left: -11px;
+  margin-top: 11px;
+}
+
+.today-event-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.today-event-copy b,
+.today-event-copy span {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.today-event-copy b {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.today-event-copy span {
+  color: #8a8a8a;
+  font-size: 12px;
+}
+
 .chat-row,
 .contact-row,
 .utility-row,

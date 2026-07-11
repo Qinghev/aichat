@@ -2,6 +2,22 @@
 import { defaultGlobalSkillPrompt } from "../lib/globalSkillTemplate";
 
 const now = new Date("2026-06-17T14:55:00+08:00").toISOString();
+const portraits = {
+  linxia: new URL("../../assets/characters/linxia.jpg", import.meta.url).href,
+  zhouyu: new URL("../../assets/characters/zhouyu.jpg", import.meta.url).href,
+  atang: new URL("../../assets/characters/atang.jpg", import.meta.url).href,
+  shenyan: new URL("../../assets/characters/shenyan.jpg", import.meta.url).href,
+  muxi: new URL("../../assets/characters/muxi.jpg", import.meta.url).href,
+  me: new URL("../../assets/characters/me.jpg", import.meta.url).href
+};
+
+const dailyPhotos = {
+  cafe: new URL("../../assets/moments/cafe.jpg", import.meta.url).href,
+  outfit: new URL("../../assets/moments/outfit.jpg", import.meta.url).href,
+  street: new URL("../../assets/moments/street.jpg", import.meta.url).href,
+  table: new URL("../../assets/moments/table.jpg", import.meta.url).href,
+  rain: new URL("../../assets/moments/rain.jpg", import.meta.url).href
+};
 
 export const seedCharacters: Character[] = [
   {
@@ -10,7 +26,7 @@ export const seedCharacters: Character[] = [
     remarkName: "林夏",
     initials: "林",
     avatarColor: "#18b97b",
-    avatarUrl: "https://i.pravatar.cc/300?img=47",
+    avatarUrl: portraits.linxia,
     relationshipToUser: "朋友",
     roleType: "温柔陪伴型朋友",
     gender: "female",
@@ -19,9 +35,9 @@ export const seedCharacters: Character[] = [
     signature: "慢慢来，比较快。",
     tags: ["温柔", "生活感", "会倾听"],
     album: [
-      { id: "album_linxia_1", type: "image", url: "https://picsum.photos/seed/linxia-cafe/480/480", title: "咖啡店" },
-      { id: "album_linxia_2", type: "image", url: "https://picsum.photos/seed/linxia-street/480/480", title: "街边" },
-      { id: "album_linxia_3", type: "image", url: "https://picsum.photos/seed/linxia-flower/480/480", title: "花" }
+      { id: "album_linxia_1", type: "image", url: dailyPhotos.cafe, title: "咖啡店" },
+      { id: "album_linxia_2", type: "image", url: dailyPhotos.street, title: "街边" },
+      { id: "album_linxia_3", type: "image", url: dailyPhotos.rain, title: "雨后" }
     ],
     background: "大学时期认识的朋友，性格温和，善于倾听，习惯先接住情绪再一起整理问题。",
     personality: { warmth: 9, humor: 4, initiative: 6, rationality: 7, emotionalSupport: 9, directness: 4 },
@@ -53,7 +69,7 @@ export const seedCharacters: Character[] = [
     remarkName: "周屿",
     initials: "周",
     avatarColor: "#4e8df5",
-    avatarUrl: "https://i.pravatar.cc/300?img=12",
+    avatarUrl: portraits.zhouyu,
     relationshipToUser: "朋友",
     roleType: "理性复盘者",
     gender: "male",
@@ -62,9 +78,9 @@ export const seedCharacters: Character[] = [
     signature: "把变量列出来，事情就清楚一半。",
     tags: ["理性", "复盘", "效率"],
     album: [
-      { id: "album_zhouyu_1", type: "image", url: "https://picsum.photos/seed/zhouyu-desk/480/480", title: "桌面" },
-      { id: "album_zhouyu_2", type: "image", url: "https://picsum.photos/seed/zhouyu-city/480/480", title: "城市" },
-      { id: "album_zhouyu_3", type: "image", url: "https://picsum.photos/seed/zhouyu-note/480/480", title: "笔记" }
+      { id: "album_zhouyu_1", type: "image", url: dailyPhotos.table, title: "桌面" },
+      { id: "album_zhouyu_2", type: "image", url: dailyPhotos.street, title: "城市" },
+      { id: "album_zhouyu_3", type: "image", url: dailyPhotos.cafe, title: "笔记" }
     ],
     background: "做产品策略的朋友，擅长把混乱的事情拆成几个可处理的点。",
     personality: { warmth: 6, humor: 3, initiative: 5, rationality: 9, emotionalSupport: 6, directness: 7 },
@@ -96,7 +112,7 @@ export const seedCharacters: Character[] = [
     remarkName: "阿棠",
     initials: "棠",
     avatarColor: "#f06f54",
-    avatarUrl: "https://i.pravatar.cc/300?img=32",
+    avatarUrl: portraits.atang,
     relationshipToUser: "朋友",
     roleType: "毒舌但关心你的朋友",
     gender: "female",
@@ -105,9 +121,9 @@ export const seedCharacters: Character[] = [
     signature: "好看和清醒都要。",
     tags: ["直球", "会吐槽", "审美在线"],
     album: [
-      { id: "album_atang_1", type: "image", url: "https://picsum.photos/seed/atang-outfit/480/480", title: "穿搭" },
-      { id: "album_atang_2", type: "image", url: "https://picsum.photos/seed/atang-food/480/480", title: "饭点" },
-      { id: "album_atang_3", type: "image", url: "https://picsum.photos/seed/atang-night/480/480", title: "夜景" }
+      { id: "album_atang_1", type: "image", url: dailyPhotos.outfit, title: "穿搭" },
+      { id: "album_atang_2", type: "image", url: dailyPhotos.table, title: "饭点" },
+      { id: "album_atang_3", type: "image", url: dailyPhotos.street, title: "夜景" }
     ],
     background: "认识很久的朋友，说话直接，偶尔吐槽，但底色是关心和帮你站稳。",
     personality: { warmth: 7, humor: 8, initiative: 7, rationality: 6, emotionalSupport: 6, directness: 8 },
@@ -139,7 +155,7 @@ export const seedCharacters: Character[] = [
     remarkName: "沈砚",
     initials: "沈",
     avatarColor: "#8b6be8",
-    avatarUrl: "https://i.pravatar.cc/300?img=68",
+    avatarUrl: portraits.shenyan,
     relationshipToUser: "演练对象",
     roleType: "严厉上级原型",
     gender: "male",
@@ -148,11 +164,11 @@ export const seedCharacters: Character[] = [
     signature: "结论要稳，表达要准。",
     tags: ["直接", "高压", "重逻辑"],
     album: [
-      { id: "album_shenyan_1", type: "image", url: "https://picsum.photos/seed/shenyan-office/480/480", title: "办公室" },
-      { id: "album_shenyan_2", type: "image", url: "https://picsum.photos/seed/shenyan-building/480/480", title: "楼宇" },
-      { id: "album_shenyan_3", type: "image", url: "https://picsum.photos/seed/shenyan-board/480/480", title: "白板" }
+      { id: "album_shenyan_1", type: "image", url: dailyPhotos.table, title: "办公室" },
+      { id: "album_shenyan_2", type: "image", url: dailyPhotos.street, title: "楼宇" },
+      { id: "album_shenyan_3", type: "image", url: dailyPhotos.cafe, title: "白板" }
     ],
-    background: "用于职场沟通演练的 AI 角色，会提出质疑，但必须保持边界和尊重。",
+    background: "用于职场沟通演练的角色，会提出质疑，但保持清晰和尊重。",
     personality: { warmth: 3, humor: 1, initiative: 6, rationality: 8, emotionalSupport: 2, directness: 9 },
     speechStyle: {
       sentenceLength: "medium",
@@ -182,7 +198,7 @@ export const seedCharacters: Character[] = [
     remarkName: "木西",
     initials: "木",
     avatarColor: "#d59d2a",
-    avatarUrl: "https://i.pravatar.cc/300?img=5",
+    avatarUrl: portraits.muxi,
     relationshipToUser: "树洞",
     roleType: "深夜树洞",
     gender: "unknown",
@@ -191,9 +207,9 @@ export const seedCharacters: Character[] = [
     signature: "不急着回答，也是一种回答。",
     tags: ["安静", "深夜", "慢节奏"],
     album: [
-      { id: "album_muxi_1", type: "image", url: "https://picsum.photos/seed/muxi-window/480/480", title: "窗边" },
-      { id: "album_muxi_2", type: "image", url: "https://picsum.photos/seed/muxi-book/480/480", title: "书" },
-      { id: "album_muxi_3", type: "image", url: "https://picsum.photos/seed/muxi-rain/480/480", title: "雨" }
+      { id: "album_muxi_1", type: "image", url: dailyPhotos.rain, title: "窗边" },
+      { id: "album_muxi_2", type: "image", url: dailyPhotos.cafe, title: "书" },
+      { id: "album_muxi_3", type: "image", url: dailyPhotos.rain, title: "雨" }
     ],
     background: "更适合低声量的深夜对话，会陪你把难以说出口的感受慢慢放下来。",
     personality: { warmth: 8, humor: 2, initiative: 4, rationality: 5, emotionalSupport: 9, directness: 3 },
@@ -296,7 +312,7 @@ export const makeInitialState = (): AppState => {
         {
           id: "m_1",
           type: "image",
-          url: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=640&q=80",
+          url: dailyPhotos.cafe,
           tone: "green",
           title: "街边小店"
         }
@@ -354,19 +370,19 @@ export const makeInitialState = (): AppState => {
         {
           id: "m_3_1",
           type: "image",
-          url: "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=640&q=80",
+          url: dailyPhotos.outfit,
           title: "穿搭"
         },
         {
           id: "m_3_2",
           type: "image",
-          url: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=640&q=80",
+          url: dailyPhotos.street,
           title: "街拍"
         },
         {
           id: "m_3_3",
           type: "image",
-          url: "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=640&q=80",
+          url: dailyPhotos.table,
           title: "细节"
         }
       ],
@@ -395,7 +411,7 @@ export const makeInitialState = (): AppState => {
         {
           id: "m_4_1",
           type: "image",
-          url: "https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?auto=format&fit=crop&w=640&q=80",
+          url: dailyPhotos.rain,
           title: "窗边"
         }
       ],
@@ -442,7 +458,7 @@ export const makeInitialState = (): AppState => {
     user: {
       id: "u_owner",
       displayName: "我",
-      avatarUrl: "https://i.pravatar.cc/300?img=45",
+      avatarUrl: portraits.me,
       consentAccepted: true,
       consentVersion: "sandbox-v1",
       ageGroup: "adult",
@@ -452,6 +468,7 @@ export const makeInitialState = (): AppState => {
     conversations,
     messages,
     moments,
+    lifeEvents: [],
     memories: [
       {
         id: "mem_1",
@@ -487,7 +504,7 @@ export const makeInitialState = (): AppState => {
       globalSkillPrompt: defaultGlobalSkillPrompt,
       globalSkillIds: [],
       chatBackgroundUrl: "",
-      momentsCoverUrl: "",
+      momentsCoverUrl: dailyPhotos.rain,
       textBackupEndpoint: "",
       autoTextBackup: false
     },
@@ -500,7 +517,9 @@ export const makeInitialState = (): AppState => {
     },
     counters: {
       todayProactiveCount: 0,
-      lastProactiveDate: ""
+      lastProactiveDate: "",
+      lastLifeRefreshAt: "",
+      lifeStreamVersion: 0
     }
   };
 };

@@ -1,9 +1,12 @@
 import { makeInitialState } from "../data/seed";
 import { defaultGlobalSkillPrompt } from "./globalSkillTemplate";
 import { applyWeeklyWalletCredit, normalizeWallet } from "./wallet";
+import { advanceLocalLife } from "./lifeStream";
 import type { AppState, MediaAsset } from "../types";
 
 const STORAGE_KEY = "ai-chat-sandbox-state-v1";
+const isLegacyRemoteAsset = (url?: string) =>
+  Boolean(url && /(?:i\.pravatar\.cc|picsum\.photos|images\.unsplash\.com)/.test(url));
 
 const normalizeMedia = (item: Partial<MediaAsset> & { tone?: string }, index: number): MediaAsset => ({
   id: item.id || `media_migrated_${index}`,
@@ -23,10 +26,18 @@ const migrateState = (state: AppState): AppState => {
   const initialState = makeInitialState();
   const existingMomentIds = new Set((state.moments || []).map((post) => post.id));
   const legacyChatBackgroundUrl = state.settings?.chatBackgroundUrl || "";
-  const migratedMoments = (state.moments || []).map((post) => ({
-    ...post,
-    media: (post.media || []).map((media, index) => normalizeMedia(media, index))
-  }));
+  const migratedMoments = (state.moments || []).map((post) => {
+    const seedPost = initialState.moments.find((item) => item.id === post.id);
+    return {
+      ...post,
+      media: (post.media || []).map((media, index) => {
+        const normalized = normalizeMedia(media, index);
+        return isLegacyRemoteAsset(normalized.url) && seedPost?.media[index]
+          ? { ...normalized, url: seedPost.media[index].url }
+          : normalized;
+      })
+    };
+  });
   const missingSeedMoments = initialState.moments.filter((post) => !existingMomentIds.has(post.id));
   const existingConversationIds = new Set((state.conversations || []).map((conversation) => conversation.id));
   const missingSeedConversations = initialState.conversations.filter(
@@ -44,8 +55,14 @@ const migrateState = (state: AppState): AppState => {
       return {
         ...(seedCharacter || {}),
         ...character,
-        avatarUrl: character.avatarUrl || seedCharacter?.avatarUrl || "",
-        album: character.album || seedCharacter?.album || [],
+        avatarUrl:
+          !character.avatarUrl || isLegacyRemoteAsset(character.avatarUrl)
+            ? seedCharacter?.avatarUrl || ""
+            : character.avatarUrl,
+        album:
+          !character.album?.length || character.album.some((media) => isLegacyRemoteAsset(media.url))
+            ? seedCharacter?.album || character.album || []
+            : character.album,
         skillPrompt: character.skillPrompt || seedCharacter?.skillPrompt || "",
         skillIds: character.skillIds || seedCharacter?.skillIds || [],
         apiTextModel: character.apiTextModel || seedCharacter?.apiTextModel || "",
@@ -81,6 +98,7 @@ const migrateState = (state: AppState): AppState => {
       ...missingSeedConversations
     ],
     moments: [...migratedMoments, ...missingSeedMoments],
+    lifeEvents: state.lifeEvents || [],
     memories: (state.memories || []).map((memory) => ({
       ...memory,
       favoriteKind: memory.favoriteKind || (memory.type === "event" && memory.content.startsWith("收藏了") ? "message" : memory.favoriteKind),
@@ -88,7 +106,10 @@ const migrateState = (state: AppState): AppState => {
     })),
     user: {
       ...state.user,
-      avatarUrl: state.user.avatarUrl || initialState.user.avatarUrl || ""
+      avatarUrl:
+        !state.user.avatarUrl || isLegacyRemoteAsset(state.user.avatarUrl)
+          ? initialState.user.avatarUrl || ""
+          : state.user.avatarUrl
     },
     settings: {
       ...initialState.settings,
@@ -102,7 +123,7 @@ const migrateState = (state: AppState): AppState => {
 export const loadAppState = (): AppState => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return applyWeeklyWalletCredit(migrateState(makeInitialState()));
+    if (!raw) return advanceLocalLife(applyWeeklyWalletCredit(migrateState(makeInitialState())));
     const parsed = JSON.parse(raw) as AppState;
     let state = migrateState({
       ...makeInitialState(),
@@ -119,14 +140,14 @@ export const loadAppState = (): AppState => {
     if (!state.settings.apiBaseUrl) state.settings.apiBaseUrl = "https://yunwu.ai/v1";
     if (!state.settings.globalSkillPrompt) state.settings.globalSkillPrompt = defaultGlobalSkillPrompt;
     if (!state.settings.chatBackgroundUrl) state.settings.chatBackgroundUrl = "";
-    if (!state.settings.momentsCoverUrl) state.settings.momentsCoverUrl = "";
+    if (!state.settings.momentsCoverUrl) state.settings.momentsCoverUrl = makeInitialState().settings.momentsCoverUrl;
     if (!state.settings.globalSkillIds) state.settings.globalSkillIds = [];
     state.settings.aiDisclosureAlwaysOn = false;
     state = applyWeeklyWalletCredit(state);
     if (!state.settings.apiKey) state.settings.providerMode = "local_mock";
-    return state;
+    return advanceLocalLife(state);
   } catch {
-    return applyWeeklyWalletCredit(migrateState(makeInitialState()));
+    return advanceLocalLife(applyWeeklyWalletCredit(migrateState(makeInitialState())));
   }
 };
 

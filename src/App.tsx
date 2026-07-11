@@ -66,7 +66,8 @@ import { checkForInternalUpdate } from "./lib/updater";
 import { formatMoney, normalizeWallet, pickRedPacketAmount } from "./lib/wallet";
 import { hasSkill, mergeSkillIds, skillCombos, skillPresets, toggleSkillId } from "./lib/skills";
 import { defaultGlobalSkillPrompt } from "./lib/globalSkillTemplate";
-import type { AppState, Character, Conversation, MediaAsset, MemoryNote, Message, MomentPost, SkillId, TabKey, UserProfile } from "./types";
+import { advanceLocalLife } from "./lib/lifeStream";
+import type { AppState, Character, Conversation, LifeEvent, MediaAsset, MemoryNote, Message, MomentPost, SkillId, TabKey, UserProfile } from "./types";
 
 const localProvider = new LocalPersonaProvider();
 
@@ -182,11 +183,11 @@ const genderText = (gender?: Character["gender"]) => {
 };
 
 const fallbackMomentImages = [
-  "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=640&q=80",
-  "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=640&q=80",
-  "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=640&q=80",
-  "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=640&q=80",
-  "https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?auto=format&fit=crop&w=640&q=80"
+  new URL("../assets/moments/cafe.jpg", import.meta.url).href,
+  new URL("../assets/moments/outfit.jpg", import.meta.url).href,
+  new URL("../assets/moments/street.jpg", import.meta.url).href,
+  new URL("../assets/moments/table.jpg", import.meta.url).href,
+  new URL("../assets/moments/rain.jpg", import.meta.url).href
 ];
 
 const fallbackMomentImage = (id: string) => {
@@ -658,15 +659,18 @@ function AvatarEditor({
 
 function ChatsTab({
   state,
-  openConversation
+  openConversation,
+  openLifeEvent
 }: {
   state: AppState;
   openConversation: (conversationId: string) => void;
+  openLifeEvent: (event: LifeEvent) => void;
 }) {
   const sorted = [...state.conversations].sort((a, b) => {
     if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
     return new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime();
   });
+  const todayEvents = state.lifeEvents.filter((event) => !event.seen).slice(0, 3);
 
   return (
     <section className="screen-body list-body">
@@ -674,6 +678,42 @@ function ChatsTab({
         <Search size={17} />
         <span>搜索</span>
       </div>
+      {todayEvents.length > 0 && (
+        <section className="today-feed" aria-label="今天的新鲜事">
+          <div className="today-feed-title">
+            <b>今天</b>
+            <span>{todayEvents.length} 件新鲜事</span>
+          </div>
+          {todayEvents.map((event) => (
+            <button type="button" className="today-event" key={event.id} onClick={() => openLifeEvent(event)}>
+              <span className={`today-event-mark today-event-${event.type}`}>
+                {event.characterIds.slice(0, 2).map((characterId) => {
+                  const character = state.characters.find((item) => item.id === characterId);
+                  if (!character) return null;
+                  return (
+                    <span
+                      className="today-mini-avatar"
+                      key={character.id}
+                      style={
+                        character.avatarUrl
+                          ? { backgroundColor: character.avatarColor, backgroundImage: `url(${character.avatarUrl})` }
+                          : { background: character.avatarColor }
+                      }
+                    >
+                      {!character.avatarUrl && character.initials}
+                    </span>
+                  );
+                })}
+              </span>
+              <span className="today-event-copy">
+                <b>{event.title}</b>
+                <span>{event.preview}</span>
+              </span>
+              <ChevronRight size={17} />
+            </button>
+          ))}
+        </section>
+      )}
       {sorted.map((conversation) => {
         const lastMessage = [...state.messages]
           .reverse()
@@ -2758,6 +2798,19 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const listener = CapacitorApp.addListener("appStateChange", ({ isActive }) => {
+      setState((prev) => {
+        const withActivity = { ...prev, user: { ...prev.user, lastActiveAt: new Date().toISOString() } };
+        return isActive ? advanceLocalLife(withActivity) : withActivity;
+      });
+    });
+    return () => {
+      void listener.then((handle) => handle.remove());
+    };
+  }, []);
+
+  useEffect(() => {
     pendingReplies.forEach((pending) => {
       if (processingReplyIds.current.has(pending.id) || processingConversationIds.current.has(pending.conversationId)) return;
       const conversationSnapshot = state.conversations.find((item) => item.id === pending.conversationId);
@@ -3119,6 +3172,9 @@ export default function App() {
       ...prev,
       conversations: prev.conversations.map((conversation) =>
         conversation.id === conversationId ? { ...conversation, unreadCount: 0 } : conversation
+      ),
+      lifeEvents: prev.lifeEvents.map((event) =>
+        event.conversationId === conversationId ? { ...event, seen: true } : event
       )
     }));
     window.history.pushState(
@@ -3294,6 +3350,18 @@ export default function App() {
       { app: "weichat", tab: "moments", conversationId: null, profileCharacterId: null, userProfileOpen: false, momentsOpen: true },
       ""
     );
+  };
+
+  const openLifeEvent = (event: LifeEvent) => {
+    setState((prev) => ({
+      ...prev,
+      lifeEvents: prev.lifeEvents.map((item) => (item.id === event.id ? { ...item, seen: true } : item))
+    }));
+    if (event.conversationId) {
+      openConversation(event.conversationId);
+      return;
+    }
+    if (event.type === "moment") openMomentsPage();
   };
 
   const closeMomentsPage = () => {
@@ -3730,7 +3798,7 @@ export default function App() {
           <div className="tab-pager">
             <div className="tab-track" style={{ transform: `translate3d(-${activeTabIndex * 100}%, 0, 0)` }}>
               <div className={`tab-slide ${activeTab === "chats" ? "active" : ""}`} aria-hidden={activeTab !== "chats"}>
-                <ChatsTab state={state} openConversation={openConversation} />
+                <ChatsTab state={state} openConversation={openConversation} openLifeEvent={openLifeEvent} />
               </div>
               <div className={`tab-slide ${activeTab === "contacts" ? "active" : ""}`} aria-hidden={activeTab !== "contacts"}>
                 <ContactsTab
