@@ -1,9 +1,9 @@
 {
-    "versionCode":  22,
-    "versionName":  "3.1",
+    "versionCode":  23,
+    "versionName":  "3.2",
     "apkUrl":  "https://qinghev.github.io/aichat/AIChatSandbox-debug.apk",
-    "sha256":  "59D86A4745041E76DEB8DC6D9B6B5DE6D34B811CC2DFC8C47E3D93E0B68B4216",
-    "notes":  "新增性别编辑、联系人与我的关系、可选成员创建多个群聊、人物之间关系管理，并让群聊回复读取人物关系。",
+    "sha256":  "1592803861919CB80883E2992FCFE61751D6FE9FF25B2733DF0ED5B7175DA90B",
+    "notes":  "联系人资料页改为微信式只读界面并保留朋友圈入口；人物新增、删除、头像、角色、关系、性格和模型设置统一迁移到我-设置-人物管理。",
     "mandatory":  false,
-    "createdAt":  "2026-07-21T08:32:45Z"
+    "createdAt":  "2026-07-21T08:56:32Z"
 }

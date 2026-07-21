@@ -491,6 +491,7 @@ export const makeInitialState = (): AppState => {
       lastActiveAt: new Date().toISOString()
     },
     characters: seedCharacters,
+    deletedCharacterIds: [],
     characterRelationships,
     conversations,
     messages,

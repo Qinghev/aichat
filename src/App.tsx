@@ -32,7 +32,6 @@ import {
   ThumbsUp,
   Trash2,
   Upload,
-  UserPlus,
   UserRound,
   Users,
   X
@@ -747,80 +746,21 @@ function ChatsTab({
 function ContactsTab({
   state,
   onOpen,
-  onAddCharacter,
-  onStartGroup,
-  onManageRelationships,
-  addRequest,
-  isActive
+  onStartGroup
 }: {
   state: AppState;
   onOpen: (characterId: string) => void;
-  onAddCharacter: (character: Character) => void;
   onStartGroup: () => void;
-  onManageRelationships: () => void;
-  addRequest: number;
-  isActive: boolean;
 }) {
-  const [isAdding, setIsAdding] = useState(false);
-  const [name, setName] = useState("");
-  const [role, setRole] = useState("自定义朋友");
-
-  useEffect(() => {
-    if (addRequest > 0) setIsAdding(true);
-  }, [addRequest]);
-
-  useEffect(() => {
-    if (!isActive) setIsAdding(false);
-  }, [isActive]);
-
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    const trimmed = name.trim();
-    if (!trimmed) return;
-    const character: Character = {
-      ...seedCharacters[0],
-      id: createId("c_custom"),
-      displayName: trimmed,
-      remarkName: trimmed,
-      initials: trimmed.slice(0, 1),
-      avatarColor: ["#18b97b", "#4e8df5", "#f06f54", "#8b6be8", "#d59d2a"][state.characters.length % 5],
-      avatarUrl: `https://i.pravatar.cc/300?u=${encodeURIComponent(trimmed)}`,
-      roleType: role.trim() || "自定义朋友",
-      gender: "unknown",
-      region: "未设置",
-      occupation: role.trim() || "自定义朋友",
-      signature: "这个人很神秘，什么都没有留下。",
-      tags: ["自定义"],
-      album: [
-        { id: createId("album"), type: "image", url: `https://picsum.photos/seed/${encodeURIComponent(trimmed)}-1/480/480` },
-        { id: createId("album"), type: "image", url: `https://picsum.photos/seed/${encodeURIComponent(trimmed)}-2/480/480` },
-        { id: createId("album"), type: "image", url: `https://picsum.photos/seed/${encodeURIComponent(trimmed)}-3/480/480` }
-      ],
-      background: `${trimmed} 是用户自定义的联系人。`,
-      skillPrompt: "",
-      skillIds: ["memory_callback", "playful_combo"],
-      proactivePolicy: { ...seedCharacters[0].proactivePolicy },
-      momentsPolicy: { ...seedCharacters[0].momentsPolicy }
-    };
-    onAddCharacter(character);
-    setName("");
-    setRole("自定义朋友");
-    setIsAdding(false);
-  };
-
   return (
     <section className="screen-body list-body">
-      <button className="utility-row" onClick={() => setIsAdding(true)}>
+      <div className="utility-row static">
         <WeIcon name="new-friend" tone="green" />
         <span>新的朋友</span>
-      </button>
+      </div>
       <button className="utility-row" type="button" onClick={onStartGroup}>
         <WeIcon name="group" tone="blue" />
         <span>群聊</span>
-      </button>
-      <button className="utility-row" type="button" onClick={onManageRelationships}>
-        <WeIcon name="group" tone="green" />
-        <span>人物关系</span>
       </button>
       <div className="utility-row static">
         <WeIcon name="tag" tone="yellow" />
@@ -844,28 +784,6 @@ function ContactsTab({
         </button>
       ))}
       <div className="contact-index" aria-hidden="true">↑ ABCDEFGHIJKLMNOPQRSTUVWXYZ#</div>
-
-      {isAdding && (
-        <div className="modal-backdrop">
-          <form className="modal-panel" onSubmit={submit}>
-            <button type="button" className="icon-button modal-close" onClick={() => setIsAdding(false)}>
-              <X size={18} />
-            </button>
-            <h2>新的朋友</h2>
-            <label>
-              昵称
-              <input value={name} onChange={(event) => setName(event.target.value)} maxLength={12} autoFocus />
-            </label>
-            <label>
-              角色类型
-              <input value={role} onChange={(event) => setRole(event.target.value)} maxLength={24} />
-            </label>
-            <button className="primary-button" type="submit">
-              保存
-            </button>
-          </form>
-        </div>
-      )}
     </section>
   );
 }
@@ -1079,6 +997,96 @@ function RelationshipManagerPage({
   );
 }
 
+function CharacterManagerPage({
+  characters,
+  relationships,
+  onBack,
+  onCreate,
+  onEdit,
+  onManageRelationships
+}: {
+  characters: Character[];
+  relationships: CharacterRelationship[];
+  onBack: () => void;
+  onCreate: (name: string) => void;
+  onEdit: (characterId: string) => void;
+  onManageRelationships: () => void;
+}) {
+  const [isAdding, setIsAdding] = useState(false);
+  const [newName, setNewName] = useState("");
+
+  const create = (event: FormEvent) => {
+    event.preventDefault();
+    const name = newName.trim();
+    if (!name) return;
+    onCreate(name);
+    setNewName("");
+    setIsAdding(false);
+  };
+
+  return (
+    <section className="profile-page character-manager-page">
+      <header className="chat-header profile-header">
+        <button className="icon-button" type="button" onClick={onBack} title="返回">
+          <ChevronLeft size={22} />
+        </button>
+        <div className="chat-title">人物管理</div>
+        <button className="icon-button" type="button" onClick={() => setIsAdding(true)} title="添加人物">
+          <Plus size={21} />
+        </button>
+      </header>
+      <div className="character-manager-scroll">
+        <div className="section-label">关系</div>
+        <button className="settings-navigation-row" type="button" onClick={onManageRelationships}>
+          <span className="settings-navigation-icon relationship-settings-icon">
+            <Users size={19} />
+          </span>
+          <span>人物关系</span>
+          <small>{relationships.length} 组</small>
+          <ChevronRight size={18} />
+        </button>
+
+        <div className="section-label">人物</div>
+        <div className="managed-character-list">
+          {characters.map((character) => (
+            <button
+              className={`managed-character-row ${character.enabled ? "" : "disabled"}`}
+              type="button"
+              key={character.id}
+              onClick={() => onEdit(character.id)}
+            >
+              <Avatar character={character} size="sm" />
+              <span className="managed-character-copy">
+                <b>{character.remarkName}</b>
+                <small>{character.relationshipToUser || character.roleType}</small>
+              </span>
+              {!character.enabled && <span className="managed-character-status">已停用</span>}
+              <ChevronRight size={18} />
+            </button>
+          ))}
+        </div>
+      </div>
+      {isAdding && (
+        <div className="modal-backdrop">
+          <form className="modal-panel" onSubmit={create}>
+            <button className="icon-button modal-close" type="button" onClick={() => setIsAdding(false)} title="关闭">
+              <X size={18} />
+            </button>
+            <h2>添加人物</h2>
+            <label>
+              名字
+              <input value={newName} onChange={(event) => setNewName(event.target.value)} maxLength={14} autoFocus />
+            </label>
+            <button className="primary-button" type="submit" disabled={!newName.trim()}>
+              下一步
+            </button>
+          </form>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function MomentComposer({
   imageSettings,
   onClose,
@@ -1171,8 +1179,7 @@ function DiscoverTab({
     { label: "小程序", icon: "mini", tone: "green", gap: true },
     { label: "深度整理", icon: "search-grid", tone: "teal", gap: true, onClick: () => onOpenTool("research") },
     { label: "文档摘记", icon: "official", tone: "blue", onClick: () => onOpenTool("document") },
-    { label: "聊天背景", icon: "camera", tone: "green", onClick: () => onOpenTool("background") },
-    { label: "角色模板", icon: "new-friend", tone: "orange", onClick: () => onOpenTool("role") }
+    { label: "聊天背景", icon: "camera", tone: "green", onClick: () => onOpenTool("background") }
   ];
 
   return (
@@ -1504,24 +1511,130 @@ function MomentCard({
 
 function CharacterProfilePage({
   character,
-  memories,
+  moments,
   onBack,
   onMessage,
+  onOpenMoments
+}: {
+  character: Character;
+  moments: MomentPost[];
+  onBack: () => void;
+  onMessage: () => void;
+  onOpenMoments: () => void;
+}) {
+  const [showActions, setShowActions] = useState(false);
+  const momentMedia = moments
+    .filter((post) => post.authorCharacterId === character.id)
+    .flatMap((post) => post.media)
+    .filter((item) => item.url.trim());
+  const previewMedia = [...momentMedia, ...(character.album || []).filter((item) => item.url.trim())]
+    .filter((item, index, items) => items.findIndex((candidate) => candidate.url === item.url) === index)
+    .slice(0, 4);
+
+  return (
+    <section className="profile-page native-character-profile">
+      <header className="chat-header profile-header">
+        <button className="icon-button" type="button" onClick={onBack} title="返回">
+          <ChevronLeft size={22} />
+        </button>
+        <div className="chat-title">详细资料</div>
+        <button className="icon-button" type="button" onClick={() => setShowActions(true)} title="更多">
+          <MoreHorizontal size={22} />
+        </button>
+      </header>
+
+      <div className="profile-scroll">
+        <section className="contact-hero-card native-contact-hero">
+          <div className="profile-big-avatar">
+            <Avatar character={character} size="lg" />
+          </div>
+          <div className="contact-hero-main">
+            <div className="profile-name-text">{character.remarkName}</div>
+            <div className="profile-meta-line">
+              <span>{genderText(character.gender)}</span>
+              <span>地区：{character.region || "未设置"}</span>
+            </div>
+            <div className="profile-id-line">微信号：{character.id.replace(/^c_/, "")}</div>
+          </div>
+        </section>
+
+        <section className="wechat-card native-profile-list">
+          <div className="native-profile-row">
+            <span>备注和标签</span>
+            <small>{(character.tags || []).slice(0, 3).join("、") || character.remarkName}</small>
+          </div>
+          <div className="native-profile-row">
+            <span>朋友权限</span>
+            <small>聊天、朋友圈</small>
+          </div>
+        </section>
+
+        <section className="wechat-card native-profile-list">
+          <button className="native-profile-row native-moments-row" type="button" onClick={onOpenMoments}>
+            <span>朋友圈</span>
+            <span className="native-moments-preview">
+              {previewMedia.map((item) => (
+                <img key={item.id} src={item.url} alt="" />
+              ))}
+            </span>
+            <ChevronRight size={18} />
+          </button>
+          <div className="native-profile-row">
+            <span>更多信息</span>
+            <small>{character.occupation || character.roleType}</small>
+          </div>
+        </section>
+
+        <section className="wechat-card native-profile-list">
+          <div className="native-profile-row">
+            <span>与我的关系</span>
+            <small>{character.relationshipToUser || "朋友"}</small>
+          </div>
+          {character.signature && (
+            <div className="native-profile-row">
+              <span>个性签名</span>
+              <small>{character.signature}</small>
+            </div>
+          )}
+        </section>
+
+        <button className="profile-message-button" type="button" onClick={onMessage}>
+          <MessageCircle size={19} />
+          发消息
+        </button>
+      </div>
+      {showActions && (
+        <ActionSheet
+          title={character.remarkName}
+          onClose={() => setShowActions(false)}
+          actions={[{ label: "发消息", icon: <MessageCircle size={18} />, onClick: onMessage }]}
+        />
+      )}
+    </section>
+  );
+}
+
+function CharacterEditorPage({
+  character,
+  memories,
+  onBack,
   onEditAvatar,
   onUpdate,
   onAddMemory,
-  onDeleteMemory
+  onDeleteMemory,
+  onDelete
 }: {
   character: Character;
   memories: MemoryNote[];
   onBack: () => void;
-  onMessage: () => void;
   onEditAvatar: () => void;
   onUpdate: (character: Character) => void;
   onAddMemory: (content: string) => void;
   onDeleteMemory: (memoryId: string) => void;
+  onDelete: () => void;
 }) {
   const [showActions, setShowActions] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [memoryDraft, setMemoryDraft] = useState("");
   const updateField = (field: keyof Character, value: string) => {
     onUpdate({ ...character, [field]: value });
@@ -1539,12 +1652,12 @@ function CharacterProfilePage({
   };
 
   return (
-    <section className="profile-page">
+    <section className="profile-page character-editor-page">
       <header className="chat-header profile-header">
         <button className="icon-button" onClick={onBack}>
           <ChevronLeft size={22} />
         </button>
-        <div className="chat-title">详细资料</div>
+        <div className="chat-title">人物设置</div>
         <button className="icon-button" onClick={() => setShowActions(true)} title="更多">
           <MoreHorizontal size={22} />
         </button>
@@ -1585,6 +1698,15 @@ function CharacterProfilePage({
               onChange={(event) => updateField("relationshipToUser", event.target.value)}
               placeholder="例如：朋友、同事、伴侣"
               maxLength={20}
+            />
+          </label>
+          <label className="profile-edit-row">
+            <span>角色类型</span>
+            <input
+              value={character.roleType || ""}
+              onChange={(event) => updateField("roleType", event.target.value)}
+              placeholder="例如：老朋友、同事、伴侣"
+              maxLength={24}
             />
           </label>
           <label className="profile-edit-row">
@@ -1759,9 +1881,9 @@ function CharacterProfilePage({
           </div>
         </section>
 
-        <button className="profile-message-button" onClick={onMessage}>
-          <MessageCircle size={19} />
-          发消息
+        <button className="profile-delete-button" type="button" onClick={() => setShowDeleteConfirm(true)}>
+          <Trash2 size={18} />
+          删除人物
         </button>
       </div>
       {showActions && (
@@ -1770,15 +1892,29 @@ function CharacterProfilePage({
           onClose={() => setShowActions(false)}
           actions={[
             { label: "设置头像", icon: <Image size={18} />, onClick: onEditAvatar },
-            { label: "发消息", icon: <MessageCircle size={18} />, onClick: onMessage },
             {
               label: character.enabled ? "停用联系人" : "启用联系人",
               icon: character.enabled ? <Trash2 size={18} /> : <RefreshCw size={18} />,
               danger: character.enabled,
               onClick: () => onUpdate({ ...character, enabled: !character.enabled })
-            }
+            },
+            { label: "删除人物", icon: <Trash2 size={18} />, danger: true, onClick: () => setShowDeleteConfirm(true) }
           ]}
         />
+      )}
+      {showDeleteConfirm && (
+        <div className="modal-backdrop">
+          <div className="modal-panel character-delete-confirm">
+            <h2>删除{character.remarkName}？</h2>
+            <p>相关私聊、群成员、朋友圈互动和人物关系会一并移除。</p>
+            <button className="character-delete-confirm-button" type="button" onClick={onDelete}>
+              删除
+            </button>
+            <button className="secondary-button" type="button" onClick={() => setShowDeleteConfirm(false)}>
+              取消
+            </button>
+          </div>
+        </div>
       )}
     </section>
   );
@@ -2057,11 +2193,13 @@ function UserProfilePage({
 function SettingsPanel({
   state,
   setState,
-  onClose
+  onClose,
+  onOpenCharacterManager
 }: {
   state: AppState;
   setState: (updater: AppState | ((prev: AppState) => AppState)) => void;
   onClose: () => void;
+  onOpenCharacterManager: () => void;
 }) {
   const [status, setStatus] = useState("");
   const updateSetting = <Key extends keyof AppState["settings"]>(key: Key, value: AppState["settings"][Key]) => {
@@ -2089,6 +2227,8 @@ function SettingsPanel({
       const backup = JSON.parse(await file.text()) as AppState;
       setState((prev) => ({
         ...backup,
+        deletedCharacterIds: backup.deletedCharacterIds || prev.deletedCharacterIds || [],
+        characterRelationships: backup.characterRelationships || prev.characterRelationships || [],
         settings: {
           ...prev.settings,
           ...backup.settings,
@@ -2131,6 +2271,18 @@ function SettingsPanel({
               placeholder="我"
             />
           </label>
+        </section>
+
+        <section className="settings-section settings-navigation-section">
+          <h3>人物</h3>
+          <button className="settings-navigation-row" type="button" onClick={onOpenCharacterManager}>
+            <span className="settings-navigation-icon character-settings-icon">
+              <Users size={19} />
+            </span>
+            <span>人物管理</span>
+            <small>{state.characters.length} 人</small>
+            <ChevronRight size={18} />
+          </button>
         </section>
 
         <section className="settings-section">
@@ -3028,8 +3180,9 @@ export default function App() {
   const [isMainActionsOpen, setIsMainActionsOpen] = useState(false);
   const [isGroupCreatorOpen, setIsGroupCreatorOpen] = useState(false);
   const [isRelationshipsOpen, setIsRelationshipsOpen] = useState(false);
+  const [isCharacterManagerOpen, setIsCharacterManagerOpen] = useState(false);
+  const [managedCharacterId, setManagedCharacterId] = useState<string | null>(null);
   const [activeTool, setActiveTool] = useState<ToolKey | null>(null);
-  const [addFriendRequest, setAddFriendRequest] = useState(0);
   const [pendingReplies, setPendingReplies] = useState<PendingReply[]>([]);
   const historyReady = useRef(false);
   const mainSwipeStart = useRef<{ x: number; y: number } | null>(null);
@@ -3370,6 +3523,14 @@ export default function App() {
         setIsRelationshipsOpen(false);
         return;
       }
+      if (managedCharacterId) {
+        setManagedCharacterId(null);
+        return;
+      }
+      if (isCharacterManagerOpen) {
+        setIsCharacterManagerOpen(false);
+        return;
+      }
       if (activeTool) {
         setActiveTool(null);
         return;
@@ -3392,6 +3553,7 @@ export default function App() {
     editingCharacterId,
     isEditingUserAvatar,
     isEditingMomentsCover,
+    isCharacterManagerOpen,
     isGroupCreatorOpen,
     isMainActionsOpen,
     isMomentsOpen,
@@ -3400,7 +3562,8 @@ export default function App() {
     isSearchOpen,
     isSettingsOpen,
     isWalletOpen,
-    isUserProfileOpen
+    isUserProfileOpen,
+    managedCharacterId
   ]);
 
   const activeConversation = useMemo(
@@ -3413,17 +3576,22 @@ export default function App() {
     [activeProfileCharacterId, state.characters]
   );
 
-  const activeProfileMemories = useMemo(() => {
-    if (!activeProfileCharacter) return [];
+  const managedCharacter = useMemo(
+    () => state.characters.find((character) => character.id === managedCharacterId),
+    [managedCharacterId, state.characters]
+  );
+
+  const managedCharacterMemories = useMemo(() => {
+    if (!managedCharacter) return [];
     const conversationIds = new Set(
       state.conversations
-        .filter((conversation) => getConversationMemberIds(conversation).includes(activeProfileCharacter.id))
+        .filter((conversation) => getConversationMemberIds(conversation).includes(managedCharacter.id))
         .map((conversation) => conversation.id)
     );
     return state.memories
       .filter((memory) => memory.sourceConversationId && conversationIds.has(memory.sourceConversationId))
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [activeProfileCharacter, state.conversations, state.memories]);
+  }, [managedCharacter, state.conversations, state.memories]);
 
   const activeBackgroundConversation = useMemo(
     () => state.conversations.find((conversation) => conversation.id === editingBackgroundConversationId),
@@ -3774,9 +3942,40 @@ export default function App() {
     setState((prev) => ({
       ...prev,
       characters: [...prev.characters, character],
+      deletedCharacterIds: prev.deletedCharacterIds.filter((characterId) => characterId !== character.id),
       conversations: [...prev.conversations, conversation],
       messages: [...prev.messages, systemMessage]
     }));
+  };
+
+  const createManagedCharacter = (requestedName: string) => {
+    const id = createId("c_custom");
+    const name = requestedName.trim() || `新人物${state.characters.length + 1}`;
+    const character: Character = {
+      ...seedCharacters[0],
+      id,
+      displayName: name,
+      remarkName: name,
+      initials: "新",
+      avatarColor: ["#18b97b", "#4e8df5", "#f06f54", "#8b6be8", "#d59d2a"][state.characters.length % 5],
+      avatarUrl: "",
+      relationshipToUser: "朋友",
+      roleType: "自定义人物",
+      gender: "unknown",
+      region: "未设置",
+      occupation: "",
+      signature: "",
+      tags: ["自定义"],
+      album: [],
+      background: `${name}是一个新创建的人物。`,
+      skillPrompt: "",
+      skillIds: ["memory_callback"],
+      proactivePolicy: { ...seedCharacters[0].proactivePolicy },
+      momentsPolicy: { ...seedCharacters[0].momentsPolicy },
+      enabled: true
+    };
+    addCharacter(character);
+    setManagedCharacterId(id);
   };
 
   const updateCharacterAvatar = (characterId: string, avatarUrl: string) => {
@@ -3800,6 +3999,72 @@ export default function App() {
           : conversation
       )
     }));
+  };
+
+  const deleteCharacter = (characterId: string) => {
+    setState((prev) => {
+      const removedConversationIds = new Set<string>();
+      const conversations: Conversation[] = [];
+
+      prev.conversations.forEach((conversation) => {
+        const memberIds = getConversationMemberIds(conversation);
+        if (!memberIds.includes(characterId)) {
+          conversations.push(conversation);
+          return;
+        }
+
+        const remainingIds = memberIds.filter((memberId) => memberId !== characterId);
+        if (memberIds.length <= 1 || remainingIds.length < 2) {
+          removedConversationIds.add(conversation.id);
+          return;
+        }
+
+        const remainingMembers = remainingIds
+          .map((memberId) => prev.characters.find((character) => character.id === memberId))
+          .filter((character): character is Character => Boolean(character));
+        conversations.push({
+          ...conversation,
+          characterId: remainingIds[0],
+          memberCharacterIds: remainingIds,
+          title: `${remainingMembers
+            .slice(0, 3)
+            .map((member) => member.remarkName)
+            .join("、")}${remainingMembers.length > 3 ? `等${remainingMembers.length}人` : ""}`
+        });
+      });
+
+      return {
+        ...prev,
+        characters: prev.characters.filter((character) => character.id !== characterId),
+        deletedCharacterIds: Array.from(new Set([...prev.deletedCharacterIds, characterId])),
+        characterRelationships: prev.characterRelationships.filter(
+          (relationship) => relationship.characterAId !== characterId && relationship.characterBId !== characterId
+        ),
+        conversations,
+        messages: prev.messages.filter(
+          (message) => !removedConversationIds.has(message.conversationId) && message.senderCharacterId !== characterId
+        ),
+        moments: prev.moments
+          .filter((post) => post.authorCharacterId !== characterId)
+          .map((post) => ({
+            ...post,
+            interactions: post.interactions.filter((interaction) => interaction.actorCharacterId !== characterId)
+          })),
+        lifeEvents: prev.lifeEvents
+          .filter((event) => !event.conversationId || !removedConversationIds.has(event.conversationId))
+          .map((event) => ({
+            ...event,
+            characterIds: event.characterIds.filter((id) => id !== characterId)
+          }))
+          .filter((event) => event.characterIds.length > 0),
+        memories: prev.memories.filter(
+          (memory) => !memory.sourceConversationId || !removedConversationIds.has(memory.sourceConversationId)
+        )
+      };
+    });
+    setPendingReplies((prev) => prev.filter((reply) => reply.characterId !== characterId));
+    setManagedCharacterId(null);
+    setEditingCharacterId(null);
   };
 
   const saveCharacterRelationship = (nextRelationship: CharacterRelationship) => {
@@ -4053,6 +4318,26 @@ export default function App() {
           onSave={saveCharacterRelationship}
           onDelete={deleteCharacterRelationship}
         />
+      ) : managedCharacter ? (
+        <CharacterEditorPage
+          character={managedCharacter}
+          memories={managedCharacterMemories}
+          onBack={() => setManagedCharacterId(null)}
+          onEditAvatar={() => setEditingCharacterId(managedCharacter.id)}
+          onUpdate={updateCharacter}
+          onAddMemory={(content) => addCharacterMemory(managedCharacter.id, content)}
+          onDeleteMemory={deleteMemory}
+          onDelete={() => deleteCharacter(managedCharacter.id)}
+        />
+      ) : isCharacterManagerOpen ? (
+        <CharacterManagerPage
+          characters={state.characters}
+          relationships={state.characterRelationships}
+          onBack={() => setIsCharacterManagerOpen(false)}
+          onCreate={createManagedCharacter}
+          onEdit={setManagedCharacterId}
+          onManageRelationships={() => setIsRelationshipsOpen(true)}
+        />
       ) : activeConversation ? (
         <ChatView
           state={state}
@@ -4085,13 +4370,10 @@ export default function App() {
       ) : activeProfileCharacter ? (
         <CharacterProfilePage
           character={activeProfileCharacter}
-          memories={activeProfileMemories}
+          moments={state.moments}
           onBack={closeCharacterProfile}
           onMessage={() => openCharacterConversation(activeProfileCharacter.id)}
-          onEditAvatar={() => setEditingCharacterId(activeProfileCharacter.id)}
-          onUpdate={updateCharacter}
-          onAddMemory={(content) => addCharacterMemory(activeProfileCharacter.id, content)}
-          onDeleteMemory={deleteMemory}
+          onOpenMoments={openMomentsPage}
         />
       ) : isMomentsOpen ? (
         <MomentsTab
@@ -4149,11 +4431,7 @@ export default function App() {
                 <ContactsTab
                   state={state}
                   onOpen={openCharacterProfile}
-                  onAddCharacter={addCharacter}
                   onStartGroup={openGroupCreator}
-                  onManageRelationships={() => setIsRelationshipsOpen(true)}
-                  addRequest={addFriendRequest}
-                  isActive={activeTab === "contacts"}
                 />
               </div>
               <div className={`tab-slide ${activeTab === "moments" ? "active" : ""}`} aria-hidden={activeTab !== "moments"}>
@@ -4178,7 +4456,17 @@ export default function App() {
         </div>
       )}
       {isWalletOpen && <WalletPanel wallet={state.wallet} onBack={() => setIsWalletOpen(false)} />}
-      {isSettingsOpen && <SettingsPanel state={state} setState={setState} onClose={() => setIsSettingsOpen(false)} />}
+      {isSettingsOpen && (
+        <SettingsPanel
+          state={state}
+          setState={setState}
+          onClose={() => setIsSettingsOpen(false)}
+          onOpenCharacterManager={() => {
+            setIsSettingsOpen(false);
+            setIsCharacterManagerOpen(true);
+          }}
+        />
+      )}
       {isSearchOpen && (
         <GlobalSearchPanel
           state={state}
@@ -4239,15 +4527,6 @@ export default function App() {
               onClick: () => {
                 triggerProactive();
                 navigateTab("chats");
-              }
-            },
-            {
-              label: "添加朋友",
-              icon: "new-friend",
-              tone: "green",
-              onClick: () => {
-                setAddFriendRequest((value) => value + 1);
-                navigateTab("contacts");
               }
             },
             { label: "发起群聊", icon: "group", tone: "blue", onClick: openGroupCreator },

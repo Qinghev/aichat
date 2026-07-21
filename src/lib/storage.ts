@@ -24,6 +24,8 @@ const normalizeMedia = (item: Partial<MediaAsset> & { tone?: string }, index: nu
 
 const migrateState = (state: AppState): AppState => {
   const initialState = makeInitialState();
+  const deletedCharacterIds = state.deletedCharacterIds || [];
+  const deletedCharacterIdSet = new Set(deletedCharacterIds);
   const existingMomentIds = new Set((state.moments || []).map((post) => post.id));
   const legacyChatBackgroundUrl = state.settings?.chatBackgroundUrl || "";
   const migratedMoments = (state.moments || []).map((post) => {
@@ -38,10 +40,16 @@ const migrateState = (state: AppState): AppState => {
       })
     };
   });
-  const missingSeedMoments = initialState.moments.filter((post) => !existingMomentIds.has(post.id));
+  const missingSeedMoments = initialState.moments.filter(
+    (post) => !existingMomentIds.has(post.id) && (!post.authorCharacterId || !deletedCharacterIdSet.has(post.authorCharacterId))
+  );
   const existingConversationIds = new Set((state.conversations || []).map((conversation) => conversation.id));
   const missingSeedConversations = initialState.conversations.filter(
-    (conversation) => conversation.memberCharacterIds && conversation.memberCharacterIds.length > 1 && !existingConversationIds.has(conversation.id)
+    (conversation) =>
+      conversation.memberCharacterIds &&
+      conversation.memberCharacterIds.length > 1 &&
+      !conversation.memberCharacterIds.some((characterId) => deletedCharacterIdSet.has(characterId)) &&
+      !existingConversationIds.has(conversation.id)
   );
   const existingMessageIds = new Set((state.messages || []).map((message) => message.id));
   const missingSeedMessages = initialState.messages.filter(
@@ -50,7 +58,7 @@ const migrateState = (state: AppState): AppState => {
 
   return {
     ...state,
-    characters: state.characters.map((character) => {
+    characters: state.characters.filter((character) => !deletedCharacterIdSet.has(character.id)).map((character) => {
       const seedCharacter = initialState.characters.find((item) => item.id === character.id);
       return {
         ...(seedCharacter || {}),
@@ -74,7 +82,12 @@ const migrateState = (state: AppState): AppState => {
         }
       };
     }),
-    characterRelationships: state.characterRelationships || initialState.characterRelationships,
+    deletedCharacterIds,
+    characterRelationships: (state.characterRelationships || initialState.characterRelationships).filter(
+      (relationship) =>
+        !deletedCharacterIdSet.has(relationship.characterAId) &&
+        !deletedCharacterIdSet.has(relationship.characterBId)
+    ),
     messages: [
       ...state.messages.map((message) => ({
         ...message,
@@ -98,7 +111,14 @@ const migrateState = (state: AppState): AppState => {
       })),
       ...missingSeedConversations
     ],
-    moments: [...migratedMoments, ...missingSeedMoments],
+    moments: [...migratedMoments, ...missingSeedMoments]
+      .filter((post) => !post.authorCharacterId || !deletedCharacterIdSet.has(post.authorCharacterId))
+      .map((post) => ({
+        ...post,
+        interactions: post.interactions.filter(
+          (interaction) => !interaction.actorCharacterId || !deletedCharacterIdSet.has(interaction.actorCharacterId)
+        )
+      })),
     lifeEvents: state.lifeEvents || [],
     memories: (state.memories || []).map((memory) => ({
       ...memory,

@@ -227,6 +227,7 @@ export interface Wallet {
 export interface AppState {
   user: UserProfile;
   characters: Character[];
+  deletedCharacterIds: string[];
   characterRelationships: CharacterRelationship[];
   conversations: Conversation[];
   messages: Message[];
