@@ -1170,7 +1170,7 @@ function DiscoverTab({
       unreadAuthor: unreadMomentAuthor
     },
     { label: "视频号", icon: "channels", tone: "orange" },
-    { label: "直播", icon: "live", tone: "red" },
+    { label: "直播", icon: "live", tone: "live-red" },
     { label: "扫一扫", icon: "scan", tone: "blue", gap: true },
     { label: "看一看", icon: "look", tone: "yellow" },
     { label: "搜一搜", icon: "search-grid", tone: "red" },
