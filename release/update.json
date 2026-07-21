@@ -1,9 +1,9 @@
 {
-    "versionCode":  23,
-    "versionName":  "3.2",
+    "versionCode":  24,
+    "versionName":  "3.3",
     "apkUrl":  "https://qinghev.github.io/aichat/AIChatSandbox-debug.apk",
-    "sha256":  "1592803861919CB80883E2992FCFE61751D6FE9FF25B2733DF0ED5B7175DA90B",
-    "notes":  "联系人资料页改为微信式只读界面并保留朋友圈入口；人物新增、删除、头像、角色、关系、性格和模型设置统一迁移到我-设置-人物管理。",
+    "sha256":  "24184321819B285916DF3DBE16A0496E00E1BC16929FCA3AF9A6A3D46B8659D0",
+    "notes":  "统一微信式图标视觉尺寸和列表分隔线；朋友圈未读红点移到行右侧并同步显示在底部发现标签。",
     "mandatory":  false,
-    "createdAt":  "2026-07-21T08:56:32Z"
+    "createdAt":  "2026-07-21T09:21:29Z"
 }

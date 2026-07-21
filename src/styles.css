@@ -4207,16 +4207,23 @@ button.profile-edit-row {
   line-height: 1.45;
 }
 
-/* Final WeChat list details: separators start after avatars, and Moments owns the unread cue. */
-.chat-row {
+/* Final WeChat list details: separators begin after each row's visual anchor. */
+.chat-row,
+.contact-row,
+.utility-row,
+.discover-row,
+.me-list-block .setting-row {
   position: relative;
   border-bottom: 0;
 }
 
-.chat-row::after {
+.chat-row::after,
+.contact-row::after,
+.utility-row::after,
+.discover-row::after,
+.me-list-block .setting-row::after {
   content: "";
   position: absolute;
-  left: 76px;
   right: 0;
   bottom: 0;
   height: 1px;
@@ -4226,24 +4233,137 @@ button.profile-edit-row {
   pointer-events: none;
 }
 
+.chat-row::after {
+  left: 76px;
+}
+
+.contact-row::after {
+  left: 68px;
+}
+
+.utility-row::after {
+  left: 64px;
+}
+
+.discover-row::after {
+  left: 61px;
+}
+
+.me-list-block .setting-row::after {
+  left: 56px;
+}
+
+.utility-row-last::after,
+.contact-row:last-of-type::after,
+.discover-row:last-child::after,
+.me-list-block .setting-row:last-child::after {
+  display: none;
+}
+
+.utility-row .wechat-icon,
+.utility-row .wechat-icon-asset {
+  width: 36px;
+  height: 36px;
+  border-radius: 5px;
+}
+
+.utility-row .wechat-icon-asset > span {
+  inset: 6px;
+}
+
 .discover-icon-slot {
   width: 32px;
   height: 32px;
   display: grid;
   place-items: center;
-  position: relative;
   justify-self: center;
 }
 
-.discover-unread-dot {
+.discover-row {
+  grid-template-columns: 32px minmax(0, 1fr) 40px;
+}
+
+.discover-row .wechat-icon,
+.discover-row .wechat-icon-asset {
+  width: 24px;
+  height: 24px;
+}
+
+.discover-row .wechat-icon-asset > span {
+  inset: 0;
+}
+
+.discover-row-tail {
+  width: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  color: #b7b7b7;
+}
+
+.discover-row-unread-dot,
+.bottom-tab-unread-dot {
   width: 8px;
   height: 8px;
-  position: absolute;
-  top: 0;
-  right: 0;
-  border: 1.5px solid #fff;
+  flex: 0 0 auto;
   border-radius: 50%;
   background: #fa5151;
+}
+
+.me-list-block .setting-row .wechat-icon,
+.me-list-block .setting-row .wechat-icon-asset {
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border-radius: 0;
+}
+
+.me-list-block .setting-row .wechat-icon-asset > span {
+  inset: 2px;
+}
+
+.me-list-block .setting-row .wechat-icon-green {
+  color: #07b65f;
+}
+
+.me-list-block .setting-row .wechat-icon-orange,
+.me-list-block .setting-row .wechat-icon-yellow {
+  color: #e6a52d;
+}
+
+.me-list-block .setting-row .wechat-icon-blue {
+  color: #4a7fc1;
+}
+
+.me-list-block .setting-row .wechat-icon-gray {
+  color: #7b8794;
+}
+
+.bottom-tab-icon {
+  width: 26px;
+  height: 25px;
+  display: grid;
+  place-items: center;
+  position: relative;
+}
+
+.bottom-tabs .wechat-icon-asset,
+.bottom-tabs button.active .wechat-icon-asset {
+  width: 24px;
+  height: 24px;
+}
+
+.bottom-tabs .wechat-icon-asset > span,
+.bottom-tabs button.active .wechat-icon-asset > span {
+  inset: 0;
+}
+
+.bottom-tab-unread-dot {
+  position: absolute;
+  top: -2px;
+  right: -4px;
+  border: 1.5px solid #f7f7f7;
 }
 
 .gender-selector {

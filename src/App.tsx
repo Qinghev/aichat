@@ -766,7 +766,7 @@ function ContactsTab({
         <WeIcon name="tag" tone="yellow" />
         <span>标签</span>
       </div>
-      <div className="utility-row static">
+      <div className="utility-row utility-row-last static">
         <WeIcon name="official" tone="teal" />
         <span>公众号</span>
       </div>
@@ -1193,10 +1193,12 @@ function DiscoverTab({
         >
           <span className="discover-icon-slot">
             <WeIcon name={row.icon} tone={row.tone} />
-            {row.unread && <span className="discover-unread-dot" aria-hidden="true" />}
           </span>
-          <span>{row.label}</span>
-          <ChevronRight size={18} />
+          <span className="discover-row-label">{row.label}</span>
+          <span className="discover-row-tail">
+            {row.unread && <span className="discover-row-unread-dot" aria-hidden="true" />}
+            <ChevronRight size={18} />
+          </span>
         </button>
       ))}
     </section>
@@ -3142,7 +3144,15 @@ function ChatView({
   );
 }
 
-function BottomTabs({ active, setActive }: { active: TabKey; setActive: (tab: TabKey) => void }) {
+function BottomTabs({
+  active,
+  setActive,
+  hasUnreadMoments
+}: {
+  active: TabKey;
+  setActive: (tab: TabKey) => void;
+  hasUnreadMoments: boolean;
+}) {
   const tabs: Array<{ key: TabKey; label: string; icon: string }> = [
     { key: "chats", label: "微信", icon: "tab-chat" },
     { key: "contacts", label: "通讯录", icon: "tab-contacts" },
@@ -3153,7 +3163,12 @@ function BottomTabs({ active, setActive }: { active: TabKey; setActive: (tab: Ta
     <nav className="bottom-tabs">
       {tabs.map((tab) => (
         <button className={active === tab.key ? "active" : ""} key={tab.key} onClick={() => setActive(tab.key)}>
-          <WeIcon name={tab.icon} />
+          <span className="bottom-tab-icon">
+            <WeIcon name={tab.icon} />
+            {tab.key === "moments" && hasUnreadMoments && (
+              <span className="bottom-tab-unread-dot" aria-hidden="true" />
+            )}
+          </span>
           <span>{tab.label}</span>
         </button>
       ))}
@@ -4300,6 +4315,7 @@ export default function App() {
   };
 
   const activeTabIndex = Math.max(0, tabOrder.indexOf(activeTab));
+  const hasUnreadMoments = state.lifeEvents.some((event) => event.type === "moment" && !event.seen);
 
   return (
     <div className="app-shell">
@@ -4438,7 +4454,7 @@ export default function App() {
                 <DiscoverTab
                   onOpenMoments={openMomentsPage}
                   onOpenTool={setActiveTool}
-                  hasUnreadMoments={state.lifeEvents.some((event) => event.type === "moment" && !event.seen)}
+                  hasUnreadMoments={hasUnreadMoments}
                 />
               </div>
               <div className={`tab-slide ${activeTab === "me" ? "active" : ""}`} aria-hidden={activeTab !== "me"}>
@@ -4452,7 +4468,7 @@ export default function App() {
               </div>
             </div>
           </div>
-          <BottomTabs active={activeTab} setActive={navigateTab} />
+          <BottomTabs active={activeTab} setActive={navigateTab} hasUnreadMoments={hasUnreadMoments} />
         </div>
       )}
       {isWalletOpen && <WalletPanel wallet={state.wallet} onBack={() => setIsWalletOpen(false)} />}
