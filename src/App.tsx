@@ -1,41 +1,4 @@
-import {
-  BellOff,
-  Bookmark,
-  BriefcaseBusiness,
-  Camera,
-  ChevronLeft,
-  ChevronRight,
-  CircleUserRound,
-  Compass,
-  Download,
-  Eye,
-  Gamepad2,
-  Heart,
-  Image,
-  Loader2,
-  MapPin,
-  MessageCircle,
-  MessageSquare,
-  Mic,
-  MoreHorizontal,
-  Pencil,
-  Pin,
-  Plus,
-  QrCode,
-  RefreshCw,
-  Search,
-  ShoppingBag,
-  SlidersHorizontal,
-  Smile,
-  Sparkles,
-  Tags,
-  ThumbsUp,
-  Trash2,
-  Upload,
-  UserRound,
-  Users,
-  X
-} from "lucide-react";
+import { Loader2, Pin } from "lucide-react";
 import { App as CapacitorApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import { ChangeEvent, CSSProperties, FormEvent, ReactNode, TouchEvent, useEffect, useMemo, useRef, useState } from "react";
@@ -82,7 +45,6 @@ import type {
 
 const localProvider = new LocalPersonaProvider();
 
-const iconSize = 20;
 const tabOrder: TabKey[] = ["chats", "contacts", "moments", "me"];
 const textModelOptions = [
   "grok-4",
@@ -144,6 +106,25 @@ const uiIconAssets = {
   "tab-discover-filled": new URL("../assets/wechat-ui-icons/filled/my_audit_discover.svg", import.meta.url).href,
   "tab-me": new URL("../assets/wechat-ui-icons/outlined/my_audit_me.svg", import.meta.url).href,
   "tab-me-filled": new URL("../assets/wechat-ui-icons/filled/my_audit_me.svg", import.meta.url).href,
+  add: new URL("../assets/wechat-ui-icons/outlined/my_audit_add.svg", import.meta.url).href,
+  "plus-circle": new URL("../assets/wechat-ui-icons/outlined/my_audit_add_circle.svg", import.meta.url).href,
+  arrow: new URL("../assets/wechat-ui-icons/outlined/my_audit_arrow.svg", import.meta.url).href,
+  back: new URL("../assets/wechat-ui-icons/outlined/my_audit_back.svg", import.meta.url).href,
+  voice: new URL("../assets/wechat-ui-icons/outlined/my_audit_voice.svg", import.meta.url).href,
+  emoji: new URL("../assets/wechat-ui-icons/outlined/my_audit_sticker.svg", import.meta.url).href,
+  album: new URL("../assets/wechat-ui-icons/outlined/my_audit_album.svg", import.meta.url).href,
+  "qr-code": new URL("../assets/wechat-ui-icons/outlined/my_audit_qr_code.svg", import.meta.url).href,
+  delete: new URL("../assets/wechat-ui-icons/outlined/my_audit_delete.svg", import.meta.url).href,
+  refresh: new URL("../assets/wechat-ui-icons/outlined/my_audit_refresh.svg", import.meta.url).href,
+  settings: new URL("../assets/wechat-ui-icons/outlined/my_audit_setting.svg", import.meta.url).href,
+  "bell-off": new URL("../assets/wechat-ui-icons/outlined/my_audit_bellring_off.svg", import.meta.url).href,
+  close: new URL("../assets/wechat-ui-icons/outlined/my_audit_close.svg", import.meta.url).href,
+  copy: new URL("../assets/wechat-ui-icons/outlined/my_audit_copy.svg", import.meta.url).href,
+  note: new URL("../assets/wechat-ui-icons/outlined/my_audit_note.svg", import.meta.url).href,
+  star: new URL("../assets/wechat-ui-icons/outlined/my_audit_star.svg", import.meta.url).href,
+  tag: new URL("../assets/wechat-ui-icons/outlined/my_audit_tag.svg", import.meta.url).href,
+  upload: new URL("../assets/wechat-ui-icons/outlined/my_audit_share.svg", import.meta.url).href,
+  profile: new URL("../assets/wechat-ui-icons/outlined/my_audit_me.svg", import.meta.url).href,
   "new-friend": new URL("../assets/wechat-ui-icons/filled/my_audit_add_friends.svg", import.meta.url).href,
   group: new URL("../assets/wechat-ui-icons/filled/my_audit_contacts.svg", import.meta.url).href,
   official: new URL("../assets/wechat-ui-icons/weixin-homepage/my_audit_official_account.svg", import.meta.url).href,
@@ -322,16 +303,21 @@ function WeIcon({
   name,
   tone,
   active = false,
-  className = ""
+  className = "",
+  size
 }: {
   name: string;
   tone?: string;
   active?: boolean;
   className?: string;
+  size?: number;
 }) {
   const activeName = `${name}-filled` as keyof typeof uiIconAssets;
   const asset = uiIconAssets[active ? activeName : (name as keyof typeof uiIconAssets)] || uiIconAssets[name as keyof typeof uiIconAssets];
-  const style = asset ? ({ "--we-icon-url": `url("${asset}")` } as CSSProperties) : undefined;
+  const style = {
+    ...(asset ? { "--we-icon-url": `url("${asset}")` } : {}),
+    ...(size ? { width: size, height: size } : {})
+  } as CSSProperties;
   return (
     <span
       className={`wechat-icon ${asset ? "wechat-icon-asset" : `wechat-icon-${name}`} ${tone ? `wechat-icon-${tone}` : ""} ${className}`}
@@ -495,11 +481,11 @@ function GlobalSearchPanel({
     <div className="search-panel">
       <div className="search-panel-top">
         <div className="search-panel-input">
-          <Search size={17} />
+          <WeIcon name="search" size={18} />
           <input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索" />
           {query && (
             <button type="button" onClick={() => setQuery("")}>
-              <X size={15} />
+              <WeIcon name="close" size={15} />
             </button>
           )}
         </div>
@@ -618,7 +604,7 @@ function ImageSearchPanel({
   return (
     <div className="image-search-panel">
       <form className="image-search-row" onSubmit={runSearch}>
-        <Search size={17} />
+        <WeIcon name="search" size={18} />
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索图片" />
         <button type="button" onClick={runGenerate} disabled={generating || loading}>
           {generating ? <Loader2 size={17} /> : "生成"}
@@ -673,14 +659,14 @@ function AvatarEditor({
     <div className="modal-backdrop">
       <div className="modal-panel avatar-panel">
         <button type="button" className="icon-button modal-close" onClick={onClose}>
-          <X size={18} />
+          <WeIcon name="close" size={18} />
         </button>
         <h2>{title}</h2>
         <div className="avatar-preview">
-          {url ? <img src={url} alt="" /> : <Image size={28} />}
+          {url ? <img src={url} alt="" /> : <WeIcon name="album" size={28} />}
         </div>
         <label className="file-row">
-          <Upload size={18} />
+          <WeIcon name="upload" size={18} />
           从手机相册选择
           <input type="file" accept="image/*" onChange={handleFile} />
         </label>
@@ -712,7 +698,7 @@ function ChatsTab({
   return (
     <section className="screen-body list-body">
       <div className="search-row">
-        <Search size={17} />
+        <WeIcon name="search" size={18} />
         <span>搜索</span>
       </div>
       {sorted.map((conversation) => {
@@ -731,7 +717,7 @@ function ChatsTab({
                 <span className="row-preview">{messagePreview(lastMessage)}</span>
                 <span className="row-icons">
                   {conversation.pinned && <Pin size={13} />}
-                  {conversation.muted && <BellOff size={13} />}
+                  {conversation.muted && <WeIcon name="bell-off" size={13} />}
                   {conversation.unreadCount > 0 && <span className="unread-dot">{conversation.unreadCount}</span>}
                 </span>
               </div>
@@ -811,7 +797,7 @@ function GroupCreatorPage({
     <section className="profile-page group-creator-page">
       <header className="chat-header profile-header">
         <button className="icon-button" type="button" onClick={onBack} title="返回">
-          <ChevronLeft size={22} />
+          <WeIcon name="back" size={24} />
         </button>
         <div className="chat-title">发起群聊</div>
         <button
@@ -902,17 +888,17 @@ function RelationshipManagerPage({
     <section className="profile-page relationship-page">
       <header className="chat-header profile-header">
         <button className="icon-button" type="button" onClick={onBack} title="返回">
-          <ChevronLeft size={22} />
+          <WeIcon name="back" size={24} />
         </button>
         <div className="chat-title">人物关系</div>
         <button className="icon-button" type="button" onClick={() => openEditor()} title="添加关系">
-          <Plus size={21} />
+          <WeIcon name="add" size={22} />
         </button>
       </header>
       <div className="relationship-scroll">
         {relationships.length === 0 ? (
           <button className="relationship-empty" type="button" onClick={() => openEditor()}>
-            <Users size={28} />
+            <WeIcon name="group" size={28} />
             <span>添加第一组人物关系</span>
           </button>
         ) : (
@@ -940,7 +926,7 @@ function RelationshipManagerPage({
                     <Avatar character={characterB} size="sm" />
                     <b>{characterB.remarkName}</b>
                   </span>
-                  <ChevronRight size={17} />
+                  <WeIcon name="arrow" size={12} className="native-chevron" />
                 </button>
               );
             })}
@@ -951,7 +937,7 @@ function RelationshipManagerPage({
         <div className="modal-backdrop">
           <form className="modal-panel relationship-editor" onSubmit={submit}>
             <button type="button" className="icon-button modal-close" onClick={() => setEditorOpen(false)} title="关闭">
-              <X size={18} />
+              <WeIcon name="close" size={18} />
             </button>
             <h2>{editingId ? "编辑关系" : "添加关系"}</h2>
             <label>
@@ -1028,22 +1014,22 @@ function CharacterManagerPage({
     <section className="profile-page character-manager-page">
       <header className="chat-header profile-header">
         <button className="icon-button" type="button" onClick={onBack} title="返回">
-          <ChevronLeft size={22} />
+          <WeIcon name="back" size={24} />
         </button>
         <div className="chat-title">人物管理</div>
         <button className="icon-button" type="button" onClick={() => setIsAdding(true)} title="添加人物">
-          <Plus size={21} />
+          <WeIcon name="add" size={22} />
         </button>
       </header>
       <div className="character-manager-scroll">
         <div className="section-label">关系</div>
         <button className="settings-navigation-row" type="button" onClick={onManageRelationships}>
           <span className="settings-navigation-icon relationship-settings-icon">
-            <Users size={19} />
+            <WeIcon name="group" size={19} />
           </span>
           <span>人物关系</span>
           <small>{relationships.length} 组</small>
-          <ChevronRight size={18} />
+          <WeIcon name="arrow" size={12} className="native-chevron" />
         </button>
 
         <div className="section-label">人物</div>
@@ -1061,7 +1047,7 @@ function CharacterManagerPage({
                 <small>{character.relationshipToUser || character.roleType}</small>
               </span>
               {!character.enabled && <span className="managed-character-status">已停用</span>}
-              <ChevronRight size={18} />
+              <WeIcon name="arrow" size={12} className="native-chevron" />
             </button>
           ))}
         </div>
@@ -1070,7 +1056,7 @@ function CharacterManagerPage({
         <div className="modal-backdrop">
           <form className="modal-panel" onSubmit={create}>
             <button className="icon-button modal-close" type="button" onClick={() => setIsAdding(false)} title="关闭">
-              <X size={18} />
+              <WeIcon name="close" size={18} />
             </button>
             <h2>添加人物</h2>
             <label>
@@ -1117,7 +1103,7 @@ function MomentComposer({
     <div className="modal-backdrop">
       <div className="modal-panel moment-compose-panel">
         <button type="button" className="icon-button modal-close" onClick={onClose}>
-          <X size={18} />
+          <WeIcon name="close" size={18} />
         </button>
         <h2>发朋友圈</h2>
         <textarea value={content} onChange={(event) => setContent(event.target.value)} placeholder="这一刻的想法..." />
@@ -1130,13 +1116,13 @@ function MomentComposer({
                 onClick={() => setMedia((prev) => prev.filter((mediaItem) => mediaItem.id !== item.id))}
               >
                 <img src={item.url} alt="" />
-                <X size={15} />
+                <WeIcon name="close" size={15} />
               </button>
             ))}
           </div>
         )}
         <label className="file-row">
-          <Upload size={18} />
+          <WeIcon name="upload" size={18} />
           从手机相册选择
           <input type="file" accept="image/*" multiple onChange={handleFile} />
         </label>
@@ -1197,7 +1183,7 @@ function DiscoverTab({
           <span className="discover-row-label">{row.label}</span>
           <span className="discover-row-tail">
             {row.unread && <span className="discover-row-unread-dot" aria-hidden="true" />}
-            <ChevronRight size={18} />
+            <WeIcon name="arrow" size={12} className="native-chevron" />
           </span>
         </button>
       ))}
@@ -1280,7 +1266,7 @@ function LocalToolPanel({
     <section className="profile-page tool-page">
       <header className="chat-header">
         <button className="icon-button" onClick={onClose}>
-          <ChevronLeft size={22} />
+          <WeIcon name="back" size={24} />
         </button>
         <div className="chat-title">{config.title}</div>
         <span />
@@ -1360,7 +1346,7 @@ function MomentsTab({
     <section className="moments-page">
       <header className={`moments-nav ${coverScrolled ? "is-scrolled" : ""}`}>
         <button className="icon-button" onClick={onBack}>
-          <ChevronLeft size={22} />
+          <WeIcon name="back" size={24} />
         </button>
         <div className="moments-nav-title">朋友圈</div>
         <button className="icon-button" onClick={() => setIsComposing(true)} onDoubleClick={onGenerate} disabled={generating}>
@@ -1537,11 +1523,11 @@ function CharacterProfilePage({
     <section className="profile-page native-character-profile">
       <header className="chat-header profile-header">
         <button className="icon-button" type="button" onClick={onBack} title="返回">
-          <ChevronLeft size={22} />
+          <WeIcon name="back" size={24} />
         </button>
         <div className="chat-title">详细资料</div>
         <button className="icon-button" type="button" onClick={() => setShowActions(true)} title="更多">
-          <MoreHorizontal size={22} />
+          <WeIcon name="more" size={24} />
         </button>
       </header>
 
@@ -1579,7 +1565,7 @@ function CharacterProfilePage({
                 <img key={item.id} src={item.url} alt="" />
               ))}
             </span>
-            <ChevronRight size={18} />
+            <WeIcon name="arrow" size={12} className="native-chevron" />
           </button>
           <div className="native-profile-row">
             <span>更多信息</span>
@@ -1601,7 +1587,7 @@ function CharacterProfilePage({
         </section>
 
         <button className="profile-message-button" type="button" onClick={onMessage}>
-          <MessageCircle size={19} />
+          <WeIcon name="comment" size={20} />
           发消息
         </button>
       </div>
@@ -1609,7 +1595,7 @@ function CharacterProfilePage({
         <ActionSheet
           title={character.remarkName}
           onClose={() => setShowActions(false)}
-          actions={[{ label: "发消息", icon: <MessageCircle size={18} />, onClick: onMessage }]}
+          actions={[{ label: "发消息", icon: <WeIcon name="comment" size={18} />, onClick: onMessage }]}
         />
       )}
     </section>
@@ -1657,11 +1643,11 @@ function CharacterEditorPage({
     <section className="profile-page character-editor-page">
       <header className="chat-header profile-header">
         <button className="icon-button" onClick={onBack}>
-          <ChevronLeft size={22} />
+          <WeIcon name="back" size={24} />
         </button>
         <div className="chat-title">人物设置</div>
         <button className="icon-button" onClick={() => setShowActions(true)} title="更多">
-          <MoreHorizontal size={22} />
+          <WeIcon name="more" size={24} />
         </button>
       </header>
 
@@ -1739,9 +1725,9 @@ function CharacterEditorPage({
 
         <section className="wechat-card">
           <div className="profile-card-title">
-            <Image size={18} />
+            <WeIcon name="album" size={18} />
             朋友圈
-            <ChevronRight size={18} />
+            <WeIcon name="arrow" size={12} className="native-chevron" />
           </div>
           <div className="album-strip">
             {(character.album || []).slice(0, 4).map((item) => (
@@ -1752,7 +1738,7 @@ function CharacterEditorPage({
 
         <section className="wechat-card">
           <div className="profile-card-title">
-            <Tags size={18} />
+            <WeIcon name="tag" size={18} />
             标签
           </div>
           <div className="tag-cloud">
@@ -1764,7 +1750,7 @@ function CharacterEditorPage({
 
         <section className="wechat-card">
           <div className="profile-card-title">
-            <Bookmark size={18} />
+            <WeIcon name="star" size={18} />
             印象
           </div>
           <div className="memory-card-list">
@@ -1774,7 +1760,7 @@ function CharacterEditorPage({
               memories.slice(0, 5).map((memory) => (
                 <div className="memory-card-item" key={memory.id}>
                   <button type="button" onClick={() => onDeleteMemory(memory.id)} title="删除">
-                    <X size={14} />
+                    <WeIcon name="close" size={14} />
                   </button>
                   <p>{memory.excerpt || memory.content}</p>
                   <span>{formatMomentTime(memory.createdAt)}</span>
@@ -1797,7 +1783,7 @@ function CharacterEditorPage({
 
         <section className="wechat-card">
           <div className="profile-card-title">
-            <BriefcaseBusiness size={18} />
+            <WeIcon name="note" size={18} />
             资料
           </div>
           <label className="profile-textarea-row">
@@ -1838,7 +1824,7 @@ function CharacterEditorPage({
 
         <section className="wechat-card">
           <div className="profile-card-title">
-            <Sparkles size={18} />
+            <WeIcon name="settings" size={18} />
             接口
           </div>
           <label className="profile-edit-row">
@@ -1863,7 +1849,7 @@ function CharacterEditorPage({
 
         <section className="wechat-card">
           <div className="profile-card-title">
-            <SlidersHorizontal size={18} />
+            <WeIcon name="profile" size={18} />
             性格
           </div>
           <div className="personality-list">
@@ -1884,7 +1870,7 @@ function CharacterEditorPage({
         </section>
 
         <button className="profile-delete-button" type="button" onClick={() => setShowDeleteConfirm(true)}>
-          <Trash2 size={18} />
+          <WeIcon name="delete" size={18} />
           删除人物
         </button>
       </div>
@@ -1893,14 +1879,14 @@ function CharacterEditorPage({
           title={character.remarkName}
           onClose={() => setShowActions(false)}
           actions={[
-            { label: "设置头像", icon: <Image size={18} />, onClick: onEditAvatar },
+            { label: "设置头像", icon: <WeIcon name="album" size={18} />, onClick: onEditAvatar },
             {
               label: character.enabled ? "停用联系人" : "启用联系人",
-              icon: character.enabled ? <Trash2 size={18} /> : <RefreshCw size={18} />,
+              icon: character.enabled ? <WeIcon name="delete" size={18} /> : <WeIcon name="refresh" size={18} />,
               danger: character.enabled,
               onClick: () => onUpdate({ ...character, enabled: !character.enabled })
             },
-            { label: "删除人物", icon: <Trash2 size={18} />, danger: true, onClick: () => setShowDeleteConfirm(true) }
+            { label: "删除人物", icon: <WeIcon name="delete" size={18} />, danger: true, onClick: () => setShowDeleteConfirm(true) }
           ]}
         />
       )}
@@ -1945,15 +1931,15 @@ function MeTab({
           <div className="profile-name">{state.user.displayName}</div>
           <div className="profile-sub">微信号：qinghe</div>
         </div>
-        <QrCode className="profile-qr-icon" size={19} />
-        <ChevronRight className="profile-edit-icon" size={18} />
+        <WeIcon name="qr-code" className="profile-qr-icon" size={20} />
+        <WeIcon name="arrow" className="profile-edit-icon native-chevron" size={12} />
       </button>
 
       <div className="settings-block me-list-block">
         <button className="setting-row" type="button" onClick={onOpenWallet}>
           <WeIcon name="services" tone="green" />
           服务
-          <ChevronRight size={18} />
+          <WeIcon name="arrow" size={12} className="native-chevron" />
         </button>
       </div>
 
@@ -1961,22 +1947,22 @@ function MeTab({
         <button className="setting-row" type="button" onClick={onOpenFavorites}>
           <WeIcon name="favorite" tone="orange" />
           收藏
-          <ChevronRight size={18} />
+          <WeIcon name="arrow" size={12} className="native-chevron" />
         </button>
         <button className="setting-row">
           <WeIcon name="moments" tone="blue" />
           朋友圈
-          <ChevronRight size={18} />
+          <WeIcon name="arrow" size={12} className="native-chevron" />
         </button>
         <button className="setting-row">
           <WeIcon name="card" tone="green" />
           卡包
-          <ChevronRight size={18} />
+          <WeIcon name="arrow" size={12} className="native-chevron" />
         </button>
         <button className="setting-row">
           <WeIcon name="sticker" tone="yellow" />
           表情
-          <ChevronRight size={18} />
+          <WeIcon name="arrow" size={12} className="native-chevron" />
         </button>
       </div>
 
@@ -1985,9 +1971,9 @@ function MeTab({
           className="setting-row"
           onClick={onOpenSettings}
         >
-          <WeIcon name="settings" tone="gray" />
+          <WeIcon name="settings" tone="green" />
           设置
-          <ChevronRight size={18} />
+          <WeIcon name="arrow" size={12} className="native-chevron" />
         </button>
       </div>
     </section>
@@ -2013,7 +1999,7 @@ function FavoritesPage({
     <section className="profile-page favorites-page">
       <header className="chat-header">
         <button className="icon-button" onClick={onBack}>
-          <ChevronLeft size={22} />
+          <WeIcon name="back" size={24} />
         </button>
         <div className="chat-title">收藏</div>
         <span />
@@ -2038,7 +2024,7 @@ function FavoritesPage({
                 <p>{memory.excerpt || memory.content}</p>
               </button>
               <button type="button" className="favorite-delete" onClick={() => onDelete(memory.id)} title="删除">
-                <Trash2 size={17} />
+                <WeIcon name="delete" size={17} />
               </button>
             </article>
           ))
@@ -2071,11 +2057,11 @@ function WalletPanel({
     <section className="wallet-page">
       <header className="chat-header wallet-topbar">
         <button className="icon-button" onClick={onBack}>
-          <ChevronLeft size={22} />
+          <WeIcon name="back" size={24} />
         </button>
         <div className="chat-title">服务</div>
         <button className="icon-button" type="button" title="更多">
-          <MoreHorizontal size={22} />
+          <WeIcon name="more" size={24} />
         </button>
       </header>
       <div className="wallet-body">
@@ -2143,11 +2129,11 @@ function UserProfilePage({
     <section className="profile-page">
       <header className="chat-header profile-header">
         <button className="icon-button" onClick={onBack}>
-          <ChevronLeft size={22} />
+          <WeIcon name="back" size={24} />
         </button>
         <div className="chat-title">个人信息</div>
         <button className="icon-button" onClick={() => setShowActions(true)} title="更多">
-          <MoreHorizontal size={22} />
+          <WeIcon name="more" size={24} />
         </button>
       </header>
 
@@ -2156,7 +2142,7 @@ function UserProfilePage({
           <button type="button" className="profile-edit-row self-avatar-row" onClick={onEditAvatar}>
             <span>头像</span>
             <UserAvatar user={user} size="lg" />
-            <ChevronRight size={18} />
+            <WeIcon name="arrow" size={12} className="native-chevron" />
           </button>
           <label className="profile-edit-row">
             <span>名字</span>
@@ -2172,8 +2158,8 @@ function UserProfilePage({
           </div>
           <div className="profile-edit-row static-row">
             <span>二维码名片</span>
-            <QrCode size={19} />
-            <ChevronRight size={18} />
+            <WeIcon name="qr-code" className="profile-qr-icon" size={20} />
+            <WeIcon name="arrow" size={12} className="native-chevron" />
           </div>
         </section>
       </div>
@@ -2182,9 +2168,9 @@ function UserProfilePage({
           title="个人信息"
           onClose={() => setShowActions(false)}
           actions={[
-            { label: "更换头像", icon: <Image size={18} />, onClick: onEditAvatar },
-            { label: "朋友圈背景", icon: <Camera size={18} />, onClick: onEditMomentsCover },
-            { label: "设置", icon: <SlidersHorizontal size={18} />, onClick: onOpenSettings }
+            { label: "更换头像", icon: <WeIcon name="album" size={18} />, onClick: onEditAvatar },
+            { label: "朋友圈背景", icon: <WeIcon name="camera" size={18} />, onClick: onEditMomentsCover },
+            { label: "设置", icon: <WeIcon name="settings" size={18} />, onClick: onOpenSettings }
           ]}
         />
       )}
@@ -2257,7 +2243,7 @@ function SettingsPanel({
     <div className="modal-backdrop">
       <div className="modal-panel settings-panel">
         <button type="button" className="icon-button modal-close" onClick={onClose}>
-          <X size={18} />
+          <WeIcon name="close" size={18} />
         </button>
         <h2>设置</h2>
 
@@ -2279,11 +2265,11 @@ function SettingsPanel({
           <h3>人物</h3>
           <button className="settings-navigation-row" type="button" onClick={onOpenCharacterManager}>
             <span className="settings-navigation-icon character-settings-icon">
-              <Users size={19} />
+              <WeIcon name="group" size={19} />
             </span>
             <span>人物管理</span>
             <small>{state.characters.length} 人</small>
-            <ChevronRight size={18} />
+            <WeIcon name="arrow" size={12} className="native-chevron" />
           </button>
         </section>
 
@@ -2382,7 +2368,7 @@ function SettingsPanel({
             导出文字档案
           </button>
           <label className="file-row">
-            <Upload size={18} />
+            <WeIcon name="upload" size={18} />
             导入文字档案
             <input type="file" accept="application/json,.json" onChange={importTextArchive} />
           </label>
@@ -2395,7 +2381,7 @@ function SettingsPanel({
             导出完整本机数据
           </button>
           <label className="file-row">
-            <Upload size={18} />
+            <WeIcon name="upload" size={18} />
             恢复完整本机数据
             <input type="file" accept="application/json,.json" onChange={importFullBackup} />
           </label>
@@ -2458,14 +2444,14 @@ function ChatBackgroundEditor({
     <div className="modal-backdrop">
       <div className="modal-panel avatar-panel">
         <button type="button" className="icon-button modal-close" onClick={onClose}>
-          <X size={18} />
+          <WeIcon name="close" size={18} />
         </button>
         <h2>设置聊天背景</h2>
         <div className="chat-background-preview">
           {previewUrl ? <img src={previewUrl} alt="" /> : <span>默认背景</span>}
         </div>
         <label className="file-row">
-          <Upload size={18} />
+          <WeIcon name="upload" size={18} />
           从手机相册选择
           <input type="file" accept="image/*" onChange={handleFile} />
         </label>
@@ -2858,7 +2844,7 @@ function ChatView({
     <section className={`chat-view ${drawerOpen ? "has-open-drawer" : ""}`}>
       <header className="chat-header">
         <button className="icon-button" onClick={close}>
-          <ChevronLeft size={22} />
+          <WeIcon name="back" size={24} />
         </button>
         <div>
           <div className="chat-title">
@@ -2869,7 +2855,7 @@ function ChatView({
           {!isThinking && isGroupConversation && <div className="chat-subtitle">{members.length}人</div>}
         </div>
         <button className="icon-button" onClick={() => setShowChatActions(true)} title="聊天信息">
-          <MoreHorizontal size={22} />
+          <WeIcon name="more" size={24} />
         </button>
       </header>
 
@@ -2948,7 +2934,7 @@ function ChatView({
 
       <form className="composer" onSubmit={sendMessage}>
         <button type="button" className="tool-button" title="语音">
-          <Mic size={iconSize} />
+          <WeIcon name="voice" size={28} />
         </button>
         <input
           value={text}
@@ -2982,7 +2968,7 @@ function ChatView({
           }}
           title="表情"
         >
-          <Smile size={iconSize} />
+          <WeIcon name="emoji" size={28} />
         </button>
         {text.trim() ? (
           <button className="send-button text-send-button" type="submit">
@@ -3000,7 +2986,7 @@ function ChatView({
             }}
             title="更多"
           >
-            <Plus size={iconSize} />
+            <WeIcon name="plus-circle" size={28} />
           </button>
         )}
       </form>
@@ -3019,7 +3005,7 @@ function ChatView({
       {showImagePicker && (
         <div className="chat-drawer image-drawer">
           <label className="file-row compact">
-            <Upload size={18} />
+            <WeIcon name="upload" size={18} />
             从手机相册选择
             <input type="file" accept="image/*" onChange={handleChatImageFile} />
           </label>
@@ -3042,7 +3028,7 @@ function ChatView({
               setShowMoreActions(false);
             }}
           >
-            <span><Image size={24} /></span>
+            <span><WeIcon name="album" size={24} /></span>
             <b>照片</b>
           </button>
           <button
@@ -3058,7 +3044,7 @@ function ChatView({
             <b>红包</b>
           </button>
           <button type="button" onClick={() => setShowStickers(true)}>
-            <span><Smile size={24} /></span>
+            <span><WeIcon name="emoji" size={24} /></span>
             <b>表情</b>
           </button>
         </div>
@@ -3102,11 +3088,11 @@ function ChatView({
           title={conversation.title}
           onClose={() => setShowChatActions(false)}
           actions={[
-            { label: "查看资料", icon: <UserRound size={18} />, onClick: () => onOpenProfile(character.id) },
+            { label: "查看资料", icon: <WeIcon name="profile" size={18} />, onClick: () => onOpenProfile(character.id) },
             { label: conversation.pinned ? "取消置顶" : "置顶聊天", icon: <Pin size={18} />, onClick: togglePinned },
-            { label: conversation.muted ? "关闭免打扰" : "消息免打扰", icon: <BellOff size={18} />, onClick: toggleMuted },
-            { label: "设置聊天背景", icon: <Image size={18} />, onClick: onEditBackground },
-            { label: "清空聊天记录", icon: <Trash2 size={18} />, danger: true, onClick: clearConversationMessages }
+            { label: conversation.muted ? "关闭免打扰" : "消息免打扰", icon: <WeIcon name="bell-off" size={18} />, onClick: toggleMuted },
+            { label: "设置聊天背景", icon: <WeIcon name="album" size={18} />, onClick: onEditBackground },
+            { label: "清空聊天记录", icon: <WeIcon name="delete" size={18} />, danger: true, onClick: clearConversationMessages }
           ]}
         />
       )}
@@ -3115,11 +3101,11 @@ function ChatView({
           title={shortMessagePreview(activeMessage)}
           onClose={() => setActiveMessage(null)}
           actions={[
-            { label: "复制", icon: <Bookmark size={18} />, onClick: () => copyMessage(activeMessage) },
-            { label: "转发", icon: <Upload size={18} />, onClick: () => setForwardingMessage(activeMessage) },
-            { label: "收藏", icon: <Bookmark size={18} />, onClick: () => favoriteMessage(activeMessage) },
-            { label: "引用", icon: <MessageCircle size={18} />, onClick: () => quoteMessage(activeMessage) },
-            { label: "删除", icon: <Trash2 size={18} />, danger: true, onClick: () => deleteMessage(activeMessage.id) }
+            { label: "复制", icon: <WeIcon name="copy" size={18} />, onClick: () => copyMessage(activeMessage) },
+            { label: "转发", icon: <WeIcon name="upload" size={18} />, onClick: () => setForwardingMessage(activeMessage) },
+            { label: "收藏", icon: <WeIcon name="star" size={18} />, onClick: () => favoriteMessage(activeMessage) },
+            { label: "引用", icon: <WeIcon name="comment" size={18} />, onClick: () => quoteMessage(activeMessage) },
+            { label: "删除", icon: <WeIcon name="delete" size={18} />, danger: true, onClick: () => deleteMessage(activeMessage.id) }
           ]}
         />
       )}
@@ -4431,7 +4417,7 @@ export default function App() {
                 )}
                 {activeTab !== "me" && (
                   <button className="icon-button" onClick={() => setIsMainActionsOpen(true)} title="更多功能">
-                    <Plus size={20} />
+                    <WeIcon name="add" size={22} />
                   </button>
                 )}
               </div>

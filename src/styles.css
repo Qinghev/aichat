@@ -3756,10 +3756,12 @@ button.profile-edit-row {
 }
 
 .plus-tool-button {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   justify-self: center;
-  border-width: 1.3px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
 }
 
 .plus-tool-button svg {
@@ -4302,6 +4304,10 @@ button.profile-edit-row {
   color: #b7b7b7;
 }
 
+.discover-row .native-chevron {
+  color: #b7b7b7;
+}
+
 .discover-row-unread-dot,
 .bottom-tab-unread-dot {
   width: 8px;
@@ -4832,4 +4838,60 @@ button.profile-edit-row {
 .character-delete-confirm .secondary-button {
   width: 100%;
   margin-top: 8px;
+}
+
+/* Keep high-frequency controls on the same 24px WeUI icon grid. */
+.native-chevron {
+  width: 18px !important;
+  height: 18px !important;
+  flex: 0 0 auto;
+  color: #b7b7b7;
+}
+
+.profile-card-title > .native-chevron,
+.me-list-block .setting-row > .native-chevron {
+  margin-left: auto;
+}
+
+.relationship-row > .native-chevron,
+.native-profile-row > .native-chevron,
+.settings-navigation-row > .native-chevron,
+.managed-character-row > .native-chevron,
+.self-avatar-row > .native-chevron,
+.static-row > .native-chevron {
+  color: #b7b7b7;
+}
+
+.static-row > .profile-qr-icon {
+  margin-left: auto;
+}
+
+.composer .tool-button {
+  width: 32px;
+  height: 32px;
+  justify-self: center;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: #222;
+}
+
+.composer .wechat-icon-asset > span {
+  inset: 0;
+}
+
+/* Match Android's slightly heavier rasterization of the 24px outline set. */
+.header-actions .wechat-icon-asset > span,
+.chat-header .wechat-icon-asset > span,
+.composer .wechat-icon-asset > span,
+.bottom-tabs button:not(.active) .wechat-icon-asset > span,
+.search-row .wechat-icon-asset > span,
+.search-panel-input .wechat-icon-asset > span,
+.image-search-row .wechat-icon-asset > span,
+.profile-qr-icon.wechat-icon-asset > span {
+  filter:
+    drop-shadow(0.15px 0 0 currentColor)
+    drop-shadow(-0.15px 0 0 currentColor)
+    drop-shadow(0 0.15px 0 currentColor)
+    drop-shadow(0 -0.15px 0 currentColor);
 }

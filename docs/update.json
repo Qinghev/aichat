@@ -1,9 +1,9 @@
 {
-    "versionCode":  24,
-    "versionName":  "3.3",
+    "versionCode":  25,
+    "versionName":  "3.4",
     "apkUrl":  "https://qinghev.github.io/aichat/AIChatSandbox-debug.apk",
-    "sha256":  "24184321819B285916DF3DBE16A0496E00E1BC16929FCA3AF9A6A3D46B8659D0",
-    "notes":  "统一微信式图标视觉尺寸和列表分隔线；朋友圈未读红点移到行右侧并同步显示在底部发现标签。",
+    "sha256":  "09D68344D2362EF42B5B8C234C6F6E451A5909BD4696D7713AE51B76404FD1F2",
+    "notes":  "逐页统一微信原生24px图标体系和Android视觉线宽；聊天栏语音、表情、加号改为同尺寸画布，加号不再偏大；同步修正顶部栏、底栏、列表箭头、二维码、设置及操作菜单图标。",
     "mandatory":  false,
-    "createdAt":  "2026-07-21T09:21:29Z"
+    "createdAt":  "2026-07-21T09:59:14Z"
 }
