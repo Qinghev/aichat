@@ -83,6 +83,14 @@ export interface Character {
   enabled: boolean;
 }
 
+export interface CharacterRelationship {
+  id: string;
+  characterAId: string;
+  characterBId: string;
+  label: string;
+  note?: string;
+}
+
 export interface Conversation {
   id: string;
   characterId: string;
@@ -179,6 +187,7 @@ export interface UserProfile {
   id: string;
   displayName: string;
   avatarUrl?: string;
+  gender?: "female" | "male" | "unknown";
   consentAccepted: boolean;
   consentVersion: string;
   ageGroup: "adult" | "unknown";
@@ -218,6 +227,7 @@ export interface Wallet {
 export interface AppState {
   user: UserProfile;
   characters: Character[];
+  characterRelationships: CharacterRelationship[];
   conversations: Conversation[];
   messages: Message[];
   moments: MomentPost[];

@@ -4245,3 +4245,238 @@ button.profile-edit-row {
   border-radius: 50%;
   background: #fa5151;
 }
+
+.gender-selector {
+  width: min(190px, calc(100% - 86px));
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2px;
+  margin-left: auto;
+  padding: 2px;
+  border-radius: 6px;
+  background: #ededed;
+}
+
+.gender-selector button {
+  min-width: 0;
+  height: 30px;
+  padding: 0 5px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #666;
+  font-size: 13px;
+}
+
+.gender-selector button.active {
+  background: #fff;
+  color: #111;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.group-create-confirm {
+  min-width: 68px;
+  height: 34px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 4px;
+  background: #07c160;
+  color: #fff;
+  font-size: 14px;
+}
+
+.group-creator-page .profile-header {
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+}
+
+.group-create-confirm:disabled {
+  background: #c7c7c7;
+  color: #f2f2f2;
+}
+
+.group-create-scroll,
+.relationship-scroll {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: calc(18px + env(safe-area-inset-bottom));
+  -webkit-overflow-scrolling: touch;
+}
+
+.group-member-list,
+.relationship-list {
+  border-top: 1px solid #e5e5e5;
+  border-bottom: 1px solid #e5e5e5;
+  background: #fff;
+}
+
+.group-member-row {
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 16px;
+  position: relative;
+  color: #111;
+}
+
+.group-member-row::after {
+  content: "";
+  position: absolute;
+  left: 92px;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: #ededed;
+  transform: scaleY(0.5);
+  transform-origin: bottom;
+}
+
+.group-member-row:last-child::after {
+  display: none;
+}
+
+.group-member-row input {
+  width: 21px;
+  height: 21px;
+  flex: 0 0 auto;
+  appearance: none;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  border: 1px solid #b8b8b8;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.group-member-row input:checked {
+  border-color: #07c160;
+  background: #07c160;
+}
+
+.group-member-row input:checked::after {
+  content: "";
+  width: 9px;
+  height: 5px;
+  margin-top: -2px;
+  border-left: 2px solid #fff;
+  border-bottom: 2px solid #fff;
+  transform: rotate(-45deg);
+}
+
+.group-member-row > span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 16px;
+}
+
+.relationship-row {
+  width: 100%;
+  min-height: 92px;
+  display: grid;
+  grid-template-columns: minmax(58px, 1fr) minmax(88px, 1.45fr) minmax(58px, 1fr) 18px;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 0;
+  border-bottom: 1px solid #ededed;
+  background: #fff;
+  color: #111;
+}
+
+.relationship-row:last-child {
+  border-bottom: 0;
+}
+
+.relationship-row > svg {
+  color: #b7b7b7;
+}
+
+.relationship-person,
+.relationship-label {
+  min-width: 0;
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+}
+
+.relationship-person b,
+.relationship-label b,
+.relationship-label small {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.relationship-person b {
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.relationship-label b {
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: #f0f0f0;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.relationship-label small {
+  display: -webkit-box;
+  color: #8a8a8a;
+  font-size: 11px;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.relationship-empty {
+  width: 100%;
+  min-height: 180px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  border: 0;
+  background: transparent;
+  color: #8a8a8a;
+}
+
+.relationship-editor {
+  max-height: min(88dvh, 680px);
+  overflow-y: auto;
+}
+
+.relationship-editor select,
+.relationship-editor textarea {
+  width: 100%;
+  padding: 0 10px;
+  border: 1px solid #d8ded8;
+  border-radius: 6px;
+  outline: none;
+  background: #fff;
+  color: #111;
+}
+
+.relationship-editor select {
+  height: 42px;
+}
+
+.relationship-editor textarea {
+  min-height: 76px;
+  padding-top: 10px;
+}
+
+.relationship-delete-button {
+  width: 100%;
+  min-height: 42px;
+  margin-top: 8px;
+  border: 0;
+  background: transparent;
+  color: #fa5151;
+}

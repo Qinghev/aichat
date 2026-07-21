@@ -1,5 +1,6 @@
 import { Capacitor, CapacitorHttp } from "@capacitor/core";
 import type { AppState, Character, Conversation, Message } from "../types";
+import type { CharacterRelationship } from "../types";
 
 export interface TextArchive {
   archiveVersion: 1;
@@ -7,6 +8,7 @@ export interface TextArchive {
   owner: {
     id: string;
     displayName: string;
+    gender?: AppState["user"]["gender"];
   };
   characters: Array<
     Pick<
@@ -40,7 +42,8 @@ export interface TextArchive {
     globalSkillPrompt?: string;
     globalSkillIds?: AppState["settings"]["globalSkillIds"];
   };
-  conversations: Array<Pick<Conversation, "id" | "characterId" | "title" | "lastMessageAt">>;
+  characterRelationships?: CharacterRelationship[];
+  conversations: Array<Pick<Conversation, "id" | "characterId" | "memberCharacterIds" | "title" | "lastMessageAt">>;
   messages: Array<
     Pick<
       Message,
@@ -56,7 +59,8 @@ export const makeTextArchive = (state: AppState): TextArchive => ({
   exportedAt: new Date().toISOString(),
   owner: {
     id: state.user.id,
-    displayName: state.user.displayName
+    displayName: state.user.displayName,
+    gender: state.user.gender
   },
   characters: state.characters.map((character) => ({
     id: character.id,
@@ -87,9 +91,11 @@ export const makeTextArchive = (state: AppState): TextArchive => ({
     globalSkillPrompt: state.settings.globalSkillPrompt,
     globalSkillIds: state.settings.globalSkillIds
   },
+  characterRelationships: state.characterRelationships,
   conversations: state.conversations.map((conversation) => ({
     id: conversation.id,
     characterId: conversation.characterId,
+    memberCharacterIds: conversation.memberCharacterIds,
     title: conversation.title,
     lastMessageAt: conversation.lastMessageAt
   })),
@@ -174,14 +180,24 @@ export const mergeTextArchive = (state: AppState, archive: TextArchive): AppStat
     );
   }
 
+  const relationshipById = new Map(state.characterRelationships.map((relationship) => [relationship.id, relationship]));
+  for (const relationship of archive.characterRelationships || []) {
+    relationshipById.set(relationship.id, relationship);
+  }
+
   return {
     ...state,
+    user: {
+      ...state.user,
+      gender: archive.owner.gender || state.user.gender
+    },
     settings: {
       ...state.settings,
       globalSkillPrompt: state.settings.globalSkillPrompt || archive.settings?.globalSkillPrompt || "",
       globalSkillIds: state.settings.globalSkillIds?.length ? state.settings.globalSkillIds : archive.settings?.globalSkillIds || []
     },
     characters: Array.from(characterById.values()),
+    characterRelationships: Array.from(relationshipById.values()),
     conversations: Array.from(conversationById.values()),
     messages: [...state.messages, ...incomingMessages].sort(
       (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()

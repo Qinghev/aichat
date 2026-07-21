@@ -1,9 +1,9 @@
 {
-    "versionCode":  21,
-    "versionName":  "3.0",
+    "versionCode":  22,
+    "versionName":  "3.1",
     "apkUrl":  "https://qinghev.github.io/aichat/AIChatSandbox-debug.apk",
-    "sha256":  "7A5770F5C8BDA14F35A1E90F2D77A4A63B4004060DF3D23CAD9821EC397AF5E9",
-    "notes":  "修正桌面图标居中；移除聊天页今日摘要；朋友圈未读改为小红点；点赞改为空心；聊天分隔线避开头像。",
+    "sha256":  "59D86A4745041E76DEB8DC6D9B6B5DE6D34B811CC2DFC8C47E3D93E0B68B4216",
+    "notes":  "新增性别编辑、联系人与我的关系、可选成员创建多个群聊、人物之间关系管理，并让群聊回复读取人物关系。",
     "mandatory":  false,
-    "createdAt":  "2026-07-21T08:09:52Z"
+    "createdAt":  "2026-07-21T08:32:45Z"
 }

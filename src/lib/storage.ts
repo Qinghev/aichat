@@ -74,6 +74,7 @@ const migrateState = (state: AppState): AppState => {
         }
       };
     }),
+    characterRelationships: state.characterRelationships || initialState.characterRelationships,
     messages: [
       ...state.messages.map((message) => ({
         ...message,
@@ -105,7 +106,9 @@ const migrateState = (state: AppState): AppState => {
       media: memory.media ? normalizeMedia(memory.media, 0) : undefined
     })),
     user: {
+      ...initialState.user,
       ...state.user,
+      gender: state.user.gender || initialState.user.gender || "unknown",
       avatarUrl:
         !state.user.avatarUrl || isLegacyRemoteAsset(state.user.avatarUrl)
           ? initialState.user.avatarUrl || ""

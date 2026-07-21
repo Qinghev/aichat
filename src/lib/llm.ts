@@ -13,6 +13,8 @@ export interface LlmChatInput {
   userMessage: string;
   recentMessages: Message[];
   memorySummary: string;
+  relationshipContext?: string;
+  speakerLabels?: Record<string, string>;
   globalSkillPrompt?: string;
   globalSkillIds?: SkillId[];
 }
@@ -48,6 +50,7 @@ const optionalPromptBlock = (title: string, content?: string) => {
 const buildPersonaPrompt = (
   character: Character,
   memorySummary: string,
+  relationshipContext?: string,
   globalSkillPrompt?: string,
   globalSkillIds: SkillId[] = []
 ) => `你正在以手机联系人「${character.remarkName}」的口吻和用户聊天。
@@ -61,6 +64,7 @@ const buildPersonaPrompt = (
 联系人资料：
 - 昵称：${character.remarkName}
 - 关系：${character.relationshipToUser}
+- 性别：${character.gender === "female" ? "女" : character.gender === "male" ? "男" : "未设置"}
 - 类型：${character.roleType}
 - 职业：${character.occupation || "未设置"}
 - 地区：${character.region || "未设置"}
@@ -70,7 +74,7 @@ const buildPersonaPrompt = (
 - 口头禅：${character.speechStyle.catchphrases.join("、")}
 - 性格参数：温暖 ${character.personality.warmth}/10，幽默 ${character.personality.humor}/10，主动 ${character.personality.initiative}/10，理性 ${character.personality.rationality}/10，共情 ${character.personality.emotionalSupport}/10，直接 ${character.personality.directness}/10
 - 熟人感：可以带一点生活细节、情绪反应、小玩笑、停顿词和你自己的偏好；不要每次都像在提供咨询服务。
-${optionalPromptBlock("全局聊天备注", globalSkillPrompt)}${optionalPromptBlock("偏好组合", combinedSkillPrompt(character, globalSkillIds))}${optionalPromptBlock("此联系人聊天备注", character.skillPrompt)}
+${optionalPromptBlock("全局聊天备注", globalSkillPrompt)}${optionalPromptBlock("偏好组合", combinedSkillPrompt(character, globalSkillIds))}${optionalPromptBlock("此联系人聊天备注", character.skillPrompt)}${optionalPromptBlock("同群人物关系", relationshipContext)}
 长期记忆摘要：
 ${memorySummary || "暂无"}
 
@@ -87,14 +91,23 @@ const toChatMessages = (input: LlmChatInput): ChatCompletionMessage[] => {
   const messages: ChatCompletionMessage[] = [
     {
       role: "system",
-      content: buildPersonaPrompt(input.character, input.memorySummary, input.globalSkillPrompt, input.globalSkillIds)
+      content: buildPersonaPrompt(
+        input.character,
+        input.memorySummary,
+        input.relationshipContext,
+        input.globalSkillPrompt,
+        input.globalSkillIds
+      )
     }
   ];
 
   for (const message of input.recentMessages.filter((item) => item.senderType !== "system").slice(-14)) {
     messages.push({
       role: message.senderType === "user" ? "user" : "assistant",
-      content: message.content
+      content:
+        message.senderType === "ai" && message.senderCharacterId && input.speakerLabels?.[message.senderCharacterId]
+          ? `${input.speakerLabels[message.senderCharacterId]}：${message.content}`
+          : message.content
     });
   }
 

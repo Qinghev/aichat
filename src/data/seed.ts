@@ -1,5 +1,6 @@
 ﻿import type { AppState, Character, Conversation, Message, MomentPost } from "../types";
 import { defaultGlobalSkillPrompt } from "../lib/globalSkillTemplate";
+import type { CharacterRelationship } from "../types";
 
 const now = new Date("2026-06-17T14:55:00+08:00").toISOString();
 const portraits = {
@@ -454,17 +455,43 @@ export const makeInitialState = (): AppState => {
     }
   ];
 
+  const characterRelationships: CharacterRelationship[] = [
+    {
+      id: "relation_linxia_atang",
+      characterAId: "c_linxia",
+      characterBId: "c_atang",
+      label: "好朋友",
+      note: "熟悉彼此的脾气，偶尔互相打趣。"
+    },
+    {
+      id: "relation_zhouyu_shenyan",
+      characterAId: "c_zhouyu",
+      characterBId: "c_shenyan",
+      label: "前同事",
+      note: "聊工作时比较直接，但认可彼此的能力。"
+    },
+    {
+      id: "relation_linxia_muxi",
+      characterAId: "c_linxia",
+      characterBId: "c_muxi",
+      label: "旧识",
+      note: "认识很久，不需要每句话都解释。"
+    }
+  ];
+
   return {
     user: {
       id: "u_owner",
       displayName: "我",
       avatarUrl: portraits.me,
+      gender: "unknown",
       consentAccepted: true,
       consentVersion: "sandbox-v1",
       ageGroup: "adult",
       lastActiveAt: new Date().toISOString()
     },
     characters: seedCharacters,
+    characterRelationships,
     conversations,
     messages,
     moments,

@@ -67,7 +67,19 @@ import { formatMoney, normalizeWallet, pickRedPacketAmount } from "./lib/wallet"
 import { hasSkill, mergeSkillIds, skillCombos, skillPresets, toggleSkillId } from "./lib/skills";
 import { defaultGlobalSkillPrompt } from "./lib/globalSkillTemplate";
 import { advanceLocalLife } from "./lib/lifeStream";
-import type { AppState, Character, Conversation, MediaAsset, MemoryNote, Message, MomentPost, SkillId, TabKey, UserProfile } from "./types";
+import type {
+  AppState,
+  Character,
+  CharacterRelationship,
+  Conversation,
+  MediaAsset,
+  MemoryNote,
+  Message,
+  MomentPost,
+  SkillId,
+  TabKey,
+  UserProfile
+} from "./types";
 
 const localProvider = new LocalPersonaProvider();
 
@@ -182,6 +194,35 @@ const genderText = (gender?: Character["gender"]) => {
   if (gender === "male") return "男";
   return "未设置";
 };
+
+function GenderSelector({
+  value,
+  onChange
+}: {
+  value?: "female" | "male" | "unknown";
+  onChange: (value: "female" | "male" | "unknown") => void;
+}) {
+  const options = [
+    { value: "female" as const, label: "女" },
+    { value: "male" as const, label: "男" },
+    { value: "unknown" as const, label: "未设置" }
+  ];
+  return (
+    <div className="gender-selector" role="group" aria-label="性别">
+      {options.map((option) => (
+        <button
+          type="button"
+          className={(value || "unknown") === option.value ? "active" : ""}
+          aria-pressed={(value || "unknown") === option.value}
+          key={option.value}
+          onClick={() => onChange(option.value)}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 const fallbackMomentImages = [
   new URL("../assets/moments/cafe.jpg", import.meta.url).href,
@@ -708,6 +749,7 @@ function ContactsTab({
   onOpen,
   onAddCharacter,
   onStartGroup,
+  onManageRelationships,
   addRequest,
   isActive
 }: {
@@ -715,6 +757,7 @@ function ContactsTab({
   onOpen: (characterId: string) => void;
   onAddCharacter: (character: Character) => void;
   onStartGroup: () => void;
+  onManageRelationships: () => void;
   addRequest: number;
   isActive: boolean;
 }) {
@@ -775,6 +818,10 @@ function ContactsTab({
         <WeIcon name="group" tone="blue" />
         <span>群聊</span>
       </button>
+      <button className="utility-row" type="button" onClick={onManageRelationships}>
+        <WeIcon name="group" tone="green" />
+        <span>人物关系</span>
+      </button>
       <div className="utility-row static">
         <WeIcon name="tag" tone="yellow" />
         <span>标签</span>
@@ -816,6 +863,215 @@ function ContactsTab({
             <button className="primary-button" type="submit">
               保存
             </button>
+          </form>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function GroupCreatorPage({
+  characters,
+  onBack,
+  onCreate
+}: {
+  characters: Character[];
+  onBack: () => void;
+  onCreate: (characterIds: string[]) => void;
+}) {
+  const availableCharacters = characters.filter((character) => character.enabled);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const selectedCount = selectedIds.length;
+
+  const toggleMember = (characterId: string) => {
+    setSelectedIds((current) =>
+      current.includes(characterId) ? current.filter((id) => id !== characterId) : [...current, characterId]
+    );
+  };
+
+  return (
+    <section className="profile-page group-creator-page">
+      <header className="chat-header profile-header">
+        <button className="icon-button" type="button" onClick={onBack} title="返回">
+          <ChevronLeft size={22} />
+        </button>
+        <div className="chat-title">发起群聊</div>
+        <button
+          className="group-create-confirm"
+          type="button"
+          disabled={selectedCount < 2}
+          onClick={() => onCreate(selectedIds)}
+        >
+          完成{selectedCount > 0 ? `(${selectedCount})` : ""}
+        </button>
+      </header>
+      <div className="group-create-scroll">
+        <div className="section-label">选择联系人</div>
+        <div className="group-member-list">
+          {availableCharacters.map((character) => {
+            const checked = selectedIds.includes(character.id);
+            return (
+              <label className="group-member-row" key={character.id}>
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => toggleMember(character.id)}
+                  aria-label={`选择${character.remarkName}`}
+                />
+                <Avatar character={character} size="sm" />
+                <span>{character.remarkName}</span>
+              </label>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function RelationshipManagerPage({
+  characters,
+  relationships,
+  onBack,
+  onSave,
+  onDelete
+}: {
+  characters: Character[];
+  relationships: CharacterRelationship[];
+  onBack: () => void;
+  onSave: (relationship: CharacterRelationship) => void;
+  onDelete: (relationshipId: string) => void;
+}) {
+  const availableCharacters = characters.filter((character) => character.enabled);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [characterAId, setCharacterAId] = useState(availableCharacters[0]?.id || "");
+  const [characterBId, setCharacterBId] = useState(availableCharacters[1]?.id || "");
+  const [label, setLabel] = useState("");
+  const [note, setNote] = useState("");
+
+  const characterById = (id: string) => characters.find((character) => character.id === id);
+  const openEditor = (relationship?: CharacterRelationship) => {
+    setEditingId(relationship?.id || null);
+    setCharacterAId(relationship?.characterAId || availableCharacters[0]?.id || "");
+    setCharacterBId(relationship?.characterBId || availableCharacters[1]?.id || "");
+    setLabel(relationship?.label || "");
+    setNote(relationship?.note || "");
+    setEditorOpen(true);
+  };
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    const relationLabel = label.trim();
+    if (!characterAId || !characterBId || characterAId === characterBId || !relationLabel) return;
+    onSave({
+      id: editingId || createId("relation"),
+      characterAId,
+      characterBId,
+      label: relationLabel,
+      note: note.trim()
+    });
+    setEditorOpen(false);
+  };
+
+  const remove = () => {
+    if (!editingId) return;
+    onDelete(editingId);
+    setEditorOpen(false);
+  };
+
+  return (
+    <section className="profile-page relationship-page">
+      <header className="chat-header profile-header">
+        <button className="icon-button" type="button" onClick={onBack} title="返回">
+          <ChevronLeft size={22} />
+        </button>
+        <div className="chat-title">人物关系</div>
+        <button className="icon-button" type="button" onClick={() => openEditor()} title="添加关系">
+          <Plus size={21} />
+        </button>
+      </header>
+      <div className="relationship-scroll">
+        {relationships.length === 0 ? (
+          <button className="relationship-empty" type="button" onClick={() => openEditor()}>
+            <Users size={28} />
+            <span>添加第一组人物关系</span>
+          </button>
+        ) : (
+          <div className="relationship-list">
+            {relationships.map((relationship) => {
+              const characterA = characterById(relationship.characterAId);
+              const characterB = characterById(relationship.characterBId);
+              if (!characterA || !characterB) return null;
+              return (
+                <button
+                  className="relationship-row"
+                  type="button"
+                  key={relationship.id}
+                  onClick={() => openEditor(relationship)}
+                >
+                  <span className="relationship-person">
+                    <Avatar character={characterA} size="sm" />
+                    <b>{characterA.remarkName}</b>
+                  </span>
+                  <span className="relationship-label">
+                    <b>{relationship.label}</b>
+                    {relationship.note && <small>{relationship.note}</small>}
+                  </span>
+                  <span className="relationship-person">
+                    <Avatar character={characterB} size="sm" />
+                    <b>{characterB.remarkName}</b>
+                  </span>
+                  <ChevronRight size={17} />
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+      {editorOpen && (
+        <div className="modal-backdrop">
+          <form className="modal-panel relationship-editor" onSubmit={submit}>
+            <button type="button" className="icon-button modal-close" onClick={() => setEditorOpen(false)} title="关闭">
+              <X size={18} />
+            </button>
+            <h2>{editingId ? "编辑关系" : "添加关系"}</h2>
+            <label>
+              人物一
+              <select value={characterAId} onChange={(event) => setCharacterAId(event.target.value)}>
+                {availableCharacters.map((character) => (
+                  <option value={character.id} key={character.id}>
+                    {character.remarkName}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              人物二
+              <select value={characterBId} onChange={(event) => setCharacterBId(event.target.value)}>
+                {availableCharacters.map((character) => (
+                  <option value={character.id} key={character.id} disabled={character.id === characterAId}>
+                    {character.remarkName}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              关系
+              <input value={label} onChange={(event) => setLabel(event.target.value)} placeholder="例如：姐妹、同事、前任" maxLength={20} />
+            </label>
+            <label>
+              相处细节
+              <textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="可选" rows={3} maxLength={120} />
+            </label>
+            <button className="primary-button" type="submit" disabled={characterAId === characterBId || !label.trim()}>
+              保存
+            </button>
+            {editingId && (
+              <button className="relationship-delete-button" type="button" onClick={remove}>
+                删除关系
+              </button>
+            )}
           </form>
         </div>
       )}
@@ -1315,6 +1571,22 @@ function CharacterProfilePage({
         </section>
 
         <section className="wechat-card">
+          <div className="profile-edit-row profile-choice-row">
+            <span>性别</span>
+            <GenderSelector
+              value={character.gender}
+              onChange={(gender) => onUpdate({ ...character, gender })}
+            />
+          </div>
+          <label className="profile-edit-row">
+            <span>与我的关系</span>
+            <input
+              value={character.relationshipToUser || ""}
+              onChange={(event) => updateField("relationshipToUser", event.target.value)}
+              placeholder="例如：朋友、同事、伴侣"
+              maxLength={20}
+            />
+          </label>
           <label className="profile-edit-row">
             <span>职业</span>
             <input
@@ -1716,7 +1988,8 @@ function UserProfilePage({
   onEditAvatar,
   onEditMomentsCover,
   onOpenSettings,
-  onUpdateName
+  onUpdateName,
+  onUpdateGender
 }: {
   user: UserProfile;
   onBack: () => void;
@@ -1724,6 +1997,7 @@ function UserProfilePage({
   onEditMomentsCover: () => void;
   onOpenSettings: () => void;
   onUpdateName: (name: string) => void;
+  onUpdateGender: (gender: NonNullable<UserProfile["gender"]>) => void;
 }) {
   const [showActions, setShowActions] = useState(false);
 
@@ -1750,6 +2024,10 @@ function UserProfilePage({
             <span>名字</span>
             <input value={user.displayName} onChange={(event) => onUpdateName(event.target.value || "我")} />
           </label>
+          <div className="profile-edit-row profile-choice-row">
+            <span>性别</span>
+            <GenderSelector value={user.gender} onChange={onUpdateGender} />
+          </div>
           <div className="profile-edit-row static-row">
             <span>微信号</span>
             <b>qinghe</b>
@@ -2748,6 +3026,8 @@ export default function App() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isGeneratingMoment, setIsGeneratingMoment] = useState(false);
   const [isMainActionsOpen, setIsMainActionsOpen] = useState(false);
+  const [isGroupCreatorOpen, setIsGroupCreatorOpen] = useState(false);
+  const [isRelationshipsOpen, setIsRelationshipsOpen] = useState(false);
   const [activeTool, setActiveTool] = useState<ToolKey | null>(null);
   const [addFriendRequest, setAddFriendRequest] = useState(0);
   const [pendingReplies, setPendingReplies] = useState<PendingReply[]>([]);
@@ -2815,6 +3095,25 @@ export default function App() {
           const recentMessages = state.messages
             .filter((message) => message.conversationId === pending.conversationId && message.senderType !== "system")
             .slice(-12);
+          const memberIds = new Set(getConversationMemberIds(conversationSnapshot));
+          const relationshipContext = state.characterRelationships
+            .filter(
+              (relationship) =>
+                memberIds.has(relationship.characterAId) && memberIds.has(relationship.characterBId)
+            )
+            .map((relationship) => {
+              const characterA = state.characters.find((character) => character.id === relationship.characterAId);
+              const characterB = state.characters.find((character) => character.id === relationship.characterBId);
+              if (!characterA || !characterB) return "";
+              return `- ${characterA.remarkName}与${characterB.remarkName}：${relationship.label}${
+                relationship.note ? `；${relationship.note}` : ""
+              }`;
+            })
+            .filter(Boolean)
+            .join("\n");
+          const speakerLabels = Object.fromEntries(
+            state.characters.map((character) => [character.id, character.remarkName])
+          );
           const characterSettings = modelSettingsForCharacter(state.settings, characterSnapshot);
           const activeProvider =
             characterSettings.providerMode === "openai_compatible" && hasConfiguredProvider(characterSettings)
@@ -2826,6 +3125,8 @@ export default function App() {
               userMessage: pending.content,
               recentMessages,
               memorySummary,
+              relationshipContext,
+              speakerLabels,
               globalSkillPrompt: state.settings.globalSkillPrompt,
               globalSkillIds: []
             })
@@ -2835,6 +3136,8 @@ export default function App() {
                 userMessage: pending.content,
                 recentMessages,
                 memorySummary,
+                relationshipContext,
+                speakerLabels,
                 globalSkillPrompt: state.settings.globalSkillPrompt,
                 globalSkillIds: []
               });
@@ -3059,6 +3362,14 @@ export default function App() {
         setIsMainActionsOpen(false);
         return;
       }
+      if (isGroupCreatorOpen) {
+        setIsGroupCreatorOpen(false);
+        return;
+      }
+      if (isRelationshipsOpen) {
+        setIsRelationshipsOpen(false);
+        return;
+      }
       if (activeTool) {
         setActiveTool(null);
         return;
@@ -3081,8 +3392,10 @@ export default function App() {
     editingCharacterId,
     isEditingUserAvatar,
     isEditingMomentsCover,
+    isGroupCreatorOpen,
     isMainActionsOpen,
     isMomentsOpen,
+    isRelationshipsOpen,
     isFavoritesOpen,
     isSearchOpen,
     isSettingsOpen,
@@ -3367,21 +3680,39 @@ export default function App() {
     }
   };
 
-  const openGroupConversation = () => {
-    const existing = state.conversations.find((conversation) => getConversationMemberIds(conversation).length > 1);
+  const openGroupCreator = () => {
+    setIsMainActionsOpen(false);
+    setIsGroupCreatorOpen(true);
+  };
+
+  const createGroupConversation = (characterIds: string[]) => {
+    if (characterIds.length < 2) return;
+    const memberKey = [...characterIds].sort().join("|");
+    const existing = state.conversations.find(
+      (conversation) =>
+        getConversationMemberIds(conversation).length > 1 &&
+        [...getConversationMemberIds(conversation)].sort().join("|") === memberKey
+    );
     if (existing) {
+      setIsGroupCreatorOpen(false);
       openConversation(existing.id);
       return;
     }
 
-    const members = state.characters.filter((character) => character.enabled).slice(0, 4);
-    if (members.length === 0) return;
+    const members = characterIds
+      .map((characterId) => state.characters.find((character) => character.id === characterId))
+      .filter((character): character is Character => Boolean(character));
+    if (members.length < 2) return;
     const now = new Date().toISOString();
+    const title = `${members
+      .slice(0, 3)
+      .map((member) => member.remarkName)
+      .join("、")}${members.length > 3 ? `等${members.length}人` : ""}`;
     const conversation: Conversation = {
       id: createId("conv_group"),
       characterId: members[0].id,
       memberCharacterIds: members.map((member) => member.id),
-      title: members.length >= 3 ? "晚风小群" : `${members.map((member) => member.remarkName).join("、")}`,
+      title,
       pinned: false,
       muted: false,
       unreadCount: 0,
@@ -3404,6 +3735,7 @@ export default function App() {
       conversations: [...prev.conversations, conversation],
       messages: [...prev.messages, systemMessage]
     }));
+    setIsGroupCreatorOpen(false);
     setActiveTab("chats");
     setActiveConversationId(conversation.id);
     setActiveProfileCharacterId(null);
@@ -3470,6 +3802,27 @@ export default function App() {
     }));
   };
 
+  const saveCharacterRelationship = (nextRelationship: CharacterRelationship) => {
+    setState((prev) => {
+      const exists = prev.characterRelationships.some((relationship) => relationship.id === nextRelationship.id);
+      return {
+        ...prev,
+        characterRelationships: exists
+          ? prev.characterRelationships.map((relationship) =>
+              relationship.id === nextRelationship.id ? nextRelationship : relationship
+            )
+          : [...prev.characterRelationships, nextRelationship]
+      };
+    });
+  };
+
+  const deleteCharacterRelationship = (relationshipId: string) => {
+    setState((prev) => ({
+      ...prev,
+      characterRelationships: prev.characterRelationships.filter((relationship) => relationship.id !== relationshipId)
+    }));
+  };
+
   const addCharacterMemory = (characterId: string, content: string) => {
     const conversation = state.conversations.find((item) => getConversationMemberIds(item).includes(characterId));
     setState((prev) => ({
@@ -3501,6 +3854,10 @@ export default function App() {
 
   const updateUserName = (displayName: string) => {
     setState((prev) => ({ ...prev, user: { ...prev.user, displayName: displayName || "我" } }));
+  };
+
+  const updateUserGender = (gender: NonNullable<UserProfile["gender"]>) => {
+    setState((prev) => ({ ...prev, user: { ...prev.user, gender } }));
   };
 
   const updateMomentsCover = (momentsCoverUrl: string) => {
@@ -3682,7 +4039,21 @@ export default function App() {
   return (
     <div className="app-shell">
       <ModelOptionDatalists />
-      {activeConversation ? (
+      {isGroupCreatorOpen ? (
+        <GroupCreatorPage
+          characters={state.characters}
+          onBack={() => setIsGroupCreatorOpen(false)}
+          onCreate={createGroupConversation}
+        />
+      ) : isRelationshipsOpen ? (
+        <RelationshipManagerPage
+          characters={state.characters}
+          relationships={state.characterRelationships}
+          onBack={() => setIsRelationshipsOpen(false)}
+          onSave={saveCharacterRelationship}
+          onDelete={deleteCharacterRelationship}
+        />
+      ) : activeConversation ? (
         <ChatView
           state={state}
           conversation={activeConversation}
@@ -3702,6 +4073,7 @@ export default function App() {
           onEditMomentsCover={() => setIsEditingMomentsCover(true)}
           onOpenSettings={() => setIsSettingsOpen(true)}
           onUpdateName={updateUserName}
+          onUpdateGender={updateUserGender}
         />
       ) : isFavoritesOpen ? (
         <FavoritesPage
@@ -3778,7 +4150,8 @@ export default function App() {
                   state={state}
                   onOpen={openCharacterProfile}
                   onAddCharacter={addCharacter}
-                  onStartGroup={openGroupConversation}
+                  onStartGroup={openGroupCreator}
+                  onManageRelationships={() => setIsRelationshipsOpen(true)}
                   addRequest={addFriendRequest}
                   isActive={activeTab === "contacts"}
                 />
@@ -3877,7 +4250,7 @@ export default function App() {
                 navigateTab("contacts");
               }
             },
-            { label: "发起群聊", icon: "group", tone: "blue", onClick: openGroupConversation },
+            { label: "发起群聊", icon: "group", tone: "blue", onClick: openGroupCreator },
             { label: "朋友圈", icon: "moments", tone: "blue", onClick: openMomentsPage },
             { label: "设置", icon: "settings", tone: "gray", onClick: () => setIsSettingsOpen(true) }
           ]}
