@@ -67,7 +67,7 @@ import { formatMoney, normalizeWallet, pickRedPacketAmount } from "./lib/wallet"
 import { hasSkill, mergeSkillIds, skillCombos, skillPresets, toggleSkillId } from "./lib/skills";
 import { defaultGlobalSkillPrompt } from "./lib/globalSkillTemplate";
 import { advanceLocalLife } from "./lib/lifeStream";
-import type { AppState, Character, Conversation, LifeEvent, MediaAsset, MemoryNote, Message, MomentPost, SkillId, TabKey, UserProfile } from "./types";
+import type { AppState, Character, Conversation, MediaAsset, MemoryNote, Message, MomentPost, SkillId, TabKey, UserProfile } from "./types";
 
 const localProvider = new LocalPersonaProvider();
 
@@ -153,7 +153,8 @@ const uiIconAssets = {
   camera: new URL("../assets/wechat-ui-icons/filled/my_audit_camera.svg", import.meta.url).href,
   more: new URL("../assets/wechat-ui-icons/filled/my_audit_more.svg", import.meta.url).href,
   comment: new URL("../assets/wechat-ui-icons/filled/my_audit_comment.svg", import.meta.url).href,
-  like: new URL("../assets/wechat-ui-icons/filled/my_audit_like.svg", import.meta.url).href,
+  like: new URL("../assets/wechat-ui-icons/outlined/my_audit_like.svg", import.meta.url).href,
+  "like-filled": new URL("../assets/wechat-ui-icons/filled/my_audit_like.svg", import.meta.url).href,
   share: new URL("../assets/wechat-ui-icons/filled/my_audit_share.svg", import.meta.url).href
 } as const;
 
@@ -659,61 +660,21 @@ function AvatarEditor({
 
 function ChatsTab({
   state,
-  openConversation,
-  openLifeEvent
+  openConversation
 }: {
   state: AppState;
   openConversation: (conversationId: string) => void;
-  openLifeEvent: (event: LifeEvent) => void;
 }) {
   const sorted = [...state.conversations].sort((a, b) => {
     if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
     return new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime();
   });
-  const todayEvents = state.lifeEvents.filter((event) => !event.seen).slice(0, 3);
-
   return (
     <section className="screen-body list-body">
       <div className="search-row">
         <Search size={17} />
         <span>搜索</span>
       </div>
-      {todayEvents.length > 0 && (
-        <section className="today-feed" aria-label="今天的新鲜事">
-          <div className="today-feed-title">
-            <b>今天</b>
-            <span>{todayEvents.length} 件新鲜事</span>
-          </div>
-          {todayEvents.map((event) => (
-            <button type="button" className="today-event" key={event.id} onClick={() => openLifeEvent(event)}>
-              <span className={`today-event-mark today-event-${event.type}`}>
-                {event.characterIds.slice(0, 2).map((characterId) => {
-                  const character = state.characters.find((item) => item.id === characterId);
-                  if (!character) return null;
-                  return (
-                    <span
-                      className="today-mini-avatar"
-                      key={character.id}
-                      style={
-                        character.avatarUrl
-                          ? { backgroundColor: character.avatarColor, backgroundImage: `url(${character.avatarUrl})` }
-                          : { background: character.avatarColor }
-                      }
-                    >
-                      {!character.avatarUrl && character.initials}
-                    </span>
-                  );
-                })}
-              </span>
-              <span className="today-event-copy">
-                <b>{event.title}</b>
-                <span>{event.preview}</span>
-              </span>
-              <ChevronRight size={17} />
-            </button>
-          ))}
-        </section>
-      )}
       {sorted.map((conversation) => {
         const lastMessage = [...state.messages]
           .reverse()
@@ -928,9 +889,24 @@ function MomentComposer({
   );
 }
 
-function DiscoverTab({ onOpenMoments, onOpenTool }: { onOpenMoments: () => void; onOpenTool: (tool: ToolKey) => void }) {
-  const rows = [
-    { label: "朋友圈", icon: "moments", tone: "blue", onClick: onOpenMoments },
+function DiscoverTab({
+  onOpenMoments,
+  onOpenTool,
+  hasUnreadMoments
+}: {
+  onOpenMoments: () => void;
+  onOpenTool: (tool: ToolKey) => void;
+  hasUnreadMoments: boolean;
+}) {
+  const rows: Array<{
+    label: string;
+    icon: string;
+    tone: string;
+    onClick?: () => void;
+    gap?: boolean;
+    unread?: boolean;
+  }> = [
+    { label: "朋友圈", icon: "moments", tone: "blue", onClick: onOpenMoments, unread: hasUnreadMoments },
     { label: "视频号", icon: "channels", tone: "orange" },
     { label: "直播", icon: "live", tone: "orange" },
     { label: "扫一扫", icon: "scan", tone: "green", gap: true },
@@ -952,7 +928,10 @@ function DiscoverTab({ onOpenMoments, onOpenTool }: { onOpenMoments: () => void;
           onClick={row.onClick}
           type="button"
         >
-          <WeIcon name={row.icon} tone={row.tone} />
+          <span className="discover-icon-slot">
+            <WeIcon name={row.icon} tone={row.tone} />
+            {row.unread && <span className="discover-unread-dot" aria-hidden="true" />}
+          </span>
           <span>{row.label}</span>
           <ChevronRight size={18} />
         </button>
@@ -3340,6 +3319,12 @@ export default function App() {
   };
 
   const openMomentsPage = () => {
+    setState((prev) => ({
+      ...prev,
+      lifeEvents: prev.lifeEvents.map((event) =>
+        event.type === "moment" ? { ...event, seen: true } : event
+      )
+    }));
     setIsMomentsOpen(true);
     setActiveConversationId(null);
     setActiveProfileCharacterId(null);
@@ -3350,18 +3335,6 @@ export default function App() {
       { app: "weichat", tab: "moments", conversationId: null, profileCharacterId: null, userProfileOpen: false, momentsOpen: true },
       ""
     );
-  };
-
-  const openLifeEvent = (event: LifeEvent) => {
-    setState((prev) => ({
-      ...prev,
-      lifeEvents: prev.lifeEvents.map((item) => (item.id === event.id ? { ...item, seen: true } : item))
-    }));
-    if (event.conversationId) {
-      openConversation(event.conversationId);
-      return;
-    }
-    if (event.type === "moment") openMomentsPage();
   };
 
   const closeMomentsPage = () => {
@@ -3798,7 +3771,7 @@ export default function App() {
           <div className="tab-pager">
             <div className="tab-track" style={{ transform: `translate3d(-${activeTabIndex * 100}%, 0, 0)` }}>
               <div className={`tab-slide ${activeTab === "chats" ? "active" : ""}`} aria-hidden={activeTab !== "chats"}>
-                <ChatsTab state={state} openConversation={openConversation} openLifeEvent={openLifeEvent} />
+                <ChatsTab state={state} openConversation={openConversation} />
               </div>
               <div className={`tab-slide ${activeTab === "contacts" ? "active" : ""}`} aria-hidden={activeTab !== "contacts"}>
                 <ContactsTab
@@ -3811,7 +3784,11 @@ export default function App() {
                 />
               </div>
               <div className={`tab-slide ${activeTab === "moments" ? "active" : ""}`} aria-hidden={activeTab !== "moments"}>
-                <DiscoverTab onOpenMoments={openMomentsPage} onOpenTool={setActiveTool} />
+                <DiscoverTab
+                  onOpenMoments={openMomentsPage}
+                  onOpenTool={setActiveTool}
+                  hasUnreadMoments={state.lifeEvents.some((event) => event.type === "moment" && !event.seen)}
+                />
               </div>
               <div className={`tab-slide ${activeTab === "me" ? "active" : ""}`} aria-hidden={activeTab !== "me"}>
                 <MeTab

@@ -1,9 +1,9 @@
 {
-    "versionCode":  20,
-    "versionName":  "2.9",
+    "versionCode":  21,
+    "versionName":  "3.0",
     "apkUrl":  "https://qinghev.github.io/aichat/AIChatSandbox-debug.apk",
-    "sha256":  "A56E26519908B12E57CEA96098424AF72C8601E6F715AFD4D9950B11EFBFFF9E",
-    "notes":  "新增本地生活流和今日动态，联系人会在离开期间留下消息、群聊与朋友圈；头像和日常图片改为离线内置，并缩小桌面图标。",
+    "sha256":  "7A5770F5C8BDA14F35A1E90F2D77A4A63B4004060DF3D23CAD9821EC397AF5E9",
+    "notes":  "修正桌面图标居中；移除聊天页今日摘要；朋友圈未读改为小红点；点赞改为空心；聊天分隔线避开头像。",
     "mandatory":  false,
-    "createdAt":  "2026-07-11T16:57:30Z"
+    "createdAt":  "2026-07-21T08:09:52Z"
 }

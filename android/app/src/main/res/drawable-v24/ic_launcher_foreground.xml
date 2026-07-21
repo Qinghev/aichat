@@ -7,7 +7,9 @@
         android:pivotX="54"
         android:pivotY="54"
         android:scaleX="0.72"
-        android:scaleY="0.72">
+        android:scaleY="0.72"
+        android:translateX="2"
+        android:translateY="-9">
     <path
         android:fillColor="#FFFFFF"
         android:pathData="M43,35C27,35 15,45.5 15,58.5C15,66.5 20.3,73.5 28.8,77.2L24.5,88L37,80.7C39,81.1 41,81.3 43,81.3C59,81.3 71,70.8 71,58.5C71,45.5 59,35 43,35Z" />
