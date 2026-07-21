@@ -1,4 +1,4 @@
-import { Loader2, Pin } from "lucide-react";
+import { Pin } from "lucide-react";
 import { App as CapacitorApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import { ChangeEvent, CSSProperties, FormEvent, ReactNode, TouchEvent, useEffect, useMemo, useRef, useState } from "react";
@@ -98,8 +98,8 @@ type PendingReply = {
 type ToolKey = "research" | "document" | "background" | "role";
 
 const uiIconAssets = {
-  "tab-chat": new URL("../assets/wechat-ui-icons/outlined/my_audit_comment.svg", import.meta.url).href,
-  "tab-chat-filled": new URL("../assets/wechat-ui-icons/filled/my_audit_comment.svg", import.meta.url).href,
+  "tab-chat": new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_tab_chats_outlined.svg", import.meta.url).href,
+  "tab-chat-filled": new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_tab_chats_filled.svg", import.meta.url).href,
   "tab-contacts": new URL("../assets/wechat-ui-icons/outlined/my_audit_contacts.svg", import.meta.url).href,
   "tab-contacts-filled": new URL("../assets/wechat-ui-icons/filled/my_audit_contacts.svg", import.meta.url).href,
   "tab-discover": new URL("../assets/wechat-ui-icons/outlined/my_audit_discover.svg", import.meta.url).href,
@@ -125,6 +125,11 @@ const uiIconAssets = {
   tag: new URL("../assets/wechat-ui-icons/outlined/my_audit_tag.svg", import.meta.url).href,
   upload: new URL("../assets/wechat-ui-icons/outlined/my_audit_share.svg", import.meta.url).href,
   profile: new URL("../assets/wechat-ui-icons/outlined/my_audit_me.svg", import.meta.url).href,
+  "contact-add": new URL("../assets/wechat-ui-icons/outlined/my_audit_add_friends.svg", import.meta.url).href,
+  "contact-entry-new": new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_contact_new_friend.png", import.meta.url).href,
+  "contact-entry-group": new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_contact_group.png", import.meta.url).href,
+  "contact-entry-tag": new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_contact_tag.png", import.meta.url).href,
+  "contact-entry-official": new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_contact_official.png", import.meta.url).href,
   "new-friend": new URL("../assets/wechat-ui-icons/filled/my_audit_add_friends.svg", import.meta.url).href,
   group: new URL("../assets/wechat-ui-icons/filled/my_audit_contacts.svg", import.meta.url).href,
   official: new URL("../assets/wechat-ui-icons/weixin-homepage/my_audit_official_account.svg", import.meta.url).href,
@@ -148,7 +153,12 @@ const uiIconAssets = {
   comment: new URL("../assets/wechat-ui-icons/filled/my_audit_comment.svg", import.meta.url).href,
   like: new URL("../assets/wechat-ui-icons/outlined/my_audit_like.svg", import.meta.url).href,
   "like-filled": new URL("../assets/wechat-ui-icons/filled/my_audit_like.svg", import.meta.url).href,
-  share: new URL("../assets/wechat-ui-icons/filled/my_audit_share.svg", import.meta.url).href
+  share: new URL("../assets/wechat-ui-icons/filled/my_audit_share.svg", import.meta.url).href,
+  "profile-pay": new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_profile_wechatpay.svg", import.meta.url).href,
+  "profile-favorite": new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_profile_favorites.svg", import.meta.url).href,
+  "profile-card": new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_profile_cards.svg", import.meta.url).href,
+  "profile-sticker": new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_profile_sticker.svg", import.meta.url).href,
+  "profile-setting": new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_profile_setting.svg", import.meta.url).href
 } as const;
 
 const createId = (prefix: string) => `${prefix}_${crypto.randomUUID()}`;
@@ -174,6 +184,25 @@ const genderText = (gender?: Character["gender"]) => {
   if (gender === "female") return "女";
   if (gender === "male") return "男";
   return "未设置";
+};
+
+const pinyinBoundaries: Array<[string, string]> = [
+  ["A", "阿"], ["B", "芭"], ["C", "擦"], ["D", "搭"], ["E", "蛾"], ["F", "发"],
+  ["G", "噶"], ["H", "哈"], ["J", "讥"], ["K", "喀"], ["L", "垃"], ["M", "妈"],
+  ["N", "拿"], ["O", "哦"], ["P", "啪"], ["Q", "期"], ["R", "然"], ["S", "撒"],
+  ["T", "塌"], ["W", "挖"], ["X", "昔"], ["Y", "压"], ["Z", "匝"]
+];
+
+const contactInitial = (name: string) => {
+  const first = name.trim().charAt(0);
+  if (!first) return "#";
+  if (/^[a-z]$/i.test(first)) return first.toUpperCase();
+  let initial = "#";
+  for (const [letter, boundary] of pinyinBoundaries) {
+    if (first.localeCompare(boundary, "zh-CN-u-co-pinyin") < 0) break;
+    initial = letter;
+  }
+  return initial;
 };
 
 function GenderSelector({
@@ -315,7 +344,8 @@ function WeIcon({
 }) {
   const activeName = `${name}-filled` as keyof typeof uiIconAssets;
   const asset = uiIconAssets[active ? activeName : (name as keyof typeof uiIconAssets)] || uiIconAssets[name as keyof typeof uiIconAssets];
-  const isFullColorAsset = name === "discover-moments";
+  const isFullColorAsset =
+    name === "discover-moments" || name.startsWith("contact-entry-") || ["profile-pay", "profile-favorite", "profile-card"].includes(name);
   const style = {
     ...(asset ? { "--we-icon-url": `url("${asset}")` } : {}),
     ...(size ? { width: size, height: size } : {})
@@ -543,105 +573,15 @@ function GlobalSearchPanel({
   );
 }
 
-function ImageSearchPanel({
-  initialQuery,
-  imageSettings,
-  onPick
-}: {
-  initialQuery: string;
-  imageSettings?: Pick<AppState["settings"], "apiKey" | "apiBaseUrl" | "apiImageModel" | "apiImageSize">;
-  onPick: (asset: MediaAsset) => void;
-}) {
-  const [query, setQuery] = useState(initialQuery);
-  const [results, setResults] = useState<MediaAsset[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [generating, setGenerating] = useState(false);
-  const [pickingId, setPickingId] = useState("");
-  const [status, setStatus] = useState("");
-
-  const runSearch = async (event?: FormEvent) => {
-    event?.preventDefault();
-    if (!query.trim() || loading || generating) return;
-    setLoading(true);
-    setStatus("");
-    try {
-      setResults(await searchImages(query, 12));
-    } catch {
-      setResults([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const runGenerate = async () => {
-    if (!query.trim() || loading || generating) return;
-    if (!imageSettings?.apiKey || !imageSettings.apiBaseUrl || !imageSettings.apiImageModel) {
-      setStatus("先在设置里填写 API Key 和生图模型");
-      return;
-    }
-    setGenerating(true);
-    setStatus("");
-    try {
-      const generated = await generateImageAsset(imageSettings, query.trim());
-      if (generated) {
-        setResults([generated]);
-        return;
-      }
-      setStatus("生成失败，已改为搜索图片");
-      setResults(await searchImages(query, 12));
-    } catch {
-      setStatus("生成失败，已改为搜索图片");
-      setResults(await searchImages(query, 12));
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  const pick = async (asset: MediaAsset) => {
-    setPickingId(asset.id);
-    onPick(await cacheImageAsset(asset));
-    setPickingId("");
-  };
-
-  return (
-    <div className="image-search-panel">
-      <form className="image-search-row" onSubmit={runSearch}>
-        <WeIcon name="search" size={18} />
-        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索图片" />
-        <button type="button" onClick={runGenerate} disabled={generating || loading}>
-          {generating ? <Loader2 size={17} /> : "生成"}
-        </button>
-        <button type="submit" disabled={loading || generating}>
-          {loading ? <Loader2 size={17} /> : "搜索"}
-        </button>
-      </form>
-      {status && <div className="image-search-status">{status}</div>}
-      {results.length > 0 && (
-        <div className="image-results">
-          {results.map((asset) => (
-            <button type="button" key={asset.id} onClick={() => pick(asset)} title={asset.title || "图片"}>
-              {pickingId === asset.id ? <Loader2 className="spin" size={18} /> : <img src={asset.thumbUrl || asset.url} alt="" />}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 function AvatarEditor({
   title,
   initialUrl,
-  searchHint,
-  imageSettings,
   filePrefix = "avatar",
   onClose,
   onSave
 }: {
   title: string;
   initialUrl?: string;
-  searchHint: string;
-  imageSettings?: Pick<AppState["settings"], "apiKey" | "apiBaseUrl" | "apiImageModel" | "apiImageSize">;
   filePrefix?: string;
   onClose: () => void;
   onSave: (avatarUrl: string) => void;
@@ -658,31 +598,25 @@ function AvatarEditor({
   };
 
   return (
-    <div className="modal-backdrop">
-      <div className="modal-panel avatar-panel">
-        <button type="button" className="icon-button modal-close" onClick={onClose}>
-          <WeIcon name="close" size={18} />
+    <section className="profile-page local-image-page">
+      <header className="chat-header profile-header">
+        <button type="button" className="icon-button" onClick={onClose} title="返回">
+          <WeIcon name="back" size={24} />
         </button>
-        <h2>{title}</h2>
-        <div className="avatar-preview">
-          {url ? <img src={url} alt="" /> : <WeIcon name="album" size={28} />}
+        <div className="chat-title">{title}</div>
+        <span />
+      </header>
+      <div className="local-image-body">
+        <div className="local-image-preview">
+          {url ? <img src={url} alt="" /> : <WeIcon name="album" size={32} />}
         </div>
-        <label className="file-row">
-          <WeIcon name="upload" size={18} />
-          从手机相册选择
+        <label className="local-image-row">
+          <span>从手机相册选择</span>
+          <WeIcon name="arrow" size={12} className="native-chevron" />
           <input type="file" accept="image/*" onChange={handleFile} />
         </label>
-        <ImageSearchPanel
-          initialQuery={searchHint}
-          imageSettings={imageSettings}
-          onPick={(asset) => {
-            setUrl(asset.url);
-            onSave(asset.url);
-            onClose();
-          }}
-        />
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -740,38 +674,53 @@ function ContactsTab({
   onOpen: (characterId: string) => void;
   onStartGroup: () => void;
 }) {
+  const sortedCharacters = [...state.characters].sort((a, b) =>
+    a.remarkName.localeCompare(b.remarkName, "zh-CN-u-co-pinyin")
+  );
+  const groupedCharacters = sortedCharacters.reduce<Array<{ initial: string; characters: Character[] }>>((groups, character) => {
+    const initial = contactInitial(character.remarkName);
+    const current = groups[groups.length - 1];
+    if (current?.initial === initial) current.characters.push(character);
+    else groups.push({ initial, characters: [character] });
+    return groups;
+  }, []);
+
   return (
     <section className="screen-body list-body">
       <div className="utility-row static">
-        <WeIcon name="new-friend" tone="green" />
+        <WeIcon name="contact-entry-new" />
         <span>新的朋友</span>
       </div>
       <button className="utility-row" type="button" onClick={onStartGroup}>
-        <WeIcon name="group" tone="blue" />
+        <WeIcon name="contact-entry-group" />
         <span>群聊</span>
       </button>
       <div className="utility-row static">
-        <WeIcon name="tag" tone="yellow" />
+        <WeIcon name="contact-entry-tag" />
         <span>标签</span>
       </div>
       <div className="utility-row utility-row-last static">
-        <WeIcon name="official" tone="teal" />
+        <WeIcon name="contact-entry-official" />
         <span>公众号</span>
       </div>
-      <div className="section-label">联系人</div>
-      {state.characters.map((character) => (
-        <button className="contact-row contact-open-row" key={character.id} onClick={() => onOpen(character.id)}>
-          <Avatar character={character} size="sm" />
-          <div>
-            <div className="contact-name">
-              {character.remarkName}
-              <AiBadge />
-            </div>
-            <div className="contact-role">{character.signature || character.roleType}</div>
-          </div>
-        </button>
+      {groupedCharacters.map((group) => (
+        <div className="contact-section" key={group.initial}>
+          <div className="section-label contact-section-label">{group.initial}</div>
+          {group.characters.map((character) => (
+            <button className="contact-row contact-open-row" key={character.id} onClick={() => onOpen(character.id)}>
+              <Avatar character={character} size="sm" />
+              <div className="contact-name">
+                {character.remarkName}
+                <AiBadge />
+              </div>
+            </button>
+          ))}
+        </div>
       ))}
-      <div className="contact-index" aria-hidden="true">↑ ABCDEFGHIJKLMNOPQRSTUVWXYZ#</div>
+      <div className="contact-index" aria-hidden="true">
+        <span>↑</span>
+        {Array.from("ABCDEFGHIJKLMNOPQRSTUVWXYZ#").map((letter) => <span key={letter}>{letter}</span>)}
+      </div>
     </section>
   );
 }
@@ -1076,11 +1025,9 @@ function CharacterManagerPage({
 }
 
 function MomentComposer({
-  imageSettings,
   onClose,
   onPublish
 }: {
-  imageSettings: Pick<AppState["settings"], "apiKey" | "apiBaseUrl" | "apiImageModel" | "apiImageSize">;
   onClose: () => void;
   onPublish: (content: string, media: MediaAsset[]) => void;
 }) {
@@ -1128,11 +1075,6 @@ function MomentComposer({
           从手机相册选择
           <input type="file" accept="image/*" multiple onChange={handleFile} />
         </label>
-        <ImageSearchPanel
-          initialQuery={content || "生活 风景"}
-          imageSettings={imageSettings}
-          onPick={(asset) => setMedia((prev) => [...prev, asset].slice(0, 9))}
-        />
         <button className="primary-button" type="button" onClick={publish} disabled={!content.trim() && media.length === 0}>
           发布
         </button>
@@ -1143,12 +1085,10 @@ function MomentComposer({
 
 function DiscoverTab({
   onOpenMoments,
-  onOpenTool,
   hasUnreadMoments,
   unreadMomentAuthor
 }: {
   onOpenMoments: () => void;
-  onOpenTool: (tool: ToolKey) => void;
   hasUnreadMoments: boolean;
   unreadMomentAuthor?: Character;
 }) {
@@ -1169,15 +1109,12 @@ function DiscoverTab({
       unread: hasUnreadMoments,
       unreadAuthor: unreadMomentAuthor
     },
-    { label: "视频号", icon: "channels", tone: "orange" },
+    { label: "视频号", icon: "channels", tone: "orange", gap: true },
     { label: "直播", icon: "live", tone: "live-red" },
     { label: "扫一扫", icon: "scan", tone: "blue", gap: true },
     { label: "看一看", icon: "look", tone: "yellow" },
     { label: "搜一搜", icon: "search-grid", tone: "red" },
-    { label: "小程序", icon: "mini", tone: "purple", gap: true },
-    { label: "深度整理", icon: "search-grid", tone: "red", gap: true, onClick: () => onOpenTool("research") },
-    { label: "文档摘记", icon: "official", tone: "blue", onClick: () => onOpenTool("document") },
-    { label: "聊天背景", icon: "camera", tone: "green", onClick: () => onOpenTool("background") }
+    { label: "小程序", icon: "mini", tone: "purple", gap: true }
   ];
 
   return (
@@ -1417,7 +1354,6 @@ function MomentsTab({
         </div>
         {isComposing && (
           <MomentComposer
-            imageSettings={state.settings}
             onClose={() => setIsComposing(false)}
             onPublish={onPublish}
           />
@@ -1944,12 +1880,14 @@ function MeTab({
   onOpenProfile,
   onOpenWallet,
   onOpenFavorites,
+  onOpenMoments,
   onOpenSettings
 }: {
   state: AppState;
   onOpenProfile: () => void;
   onOpenWallet: () => void;
   onOpenFavorites: () => void;
+  onOpenMoments: () => void;
   onOpenSettings: () => void;
 }) {
   return (
@@ -1968,7 +1906,7 @@ function MeTab({
 
       <div className="settings-block me-list-block">
         <button className="setting-row" type="button" onClick={onOpenWallet}>
-          <WeIcon name="services" tone="green" />
+          <WeIcon name="profile-pay" />
           服务
           <WeIcon name="arrow" size={12} className="native-chevron" />
         </button>
@@ -1976,22 +1914,22 @@ function MeTab({
 
       <div className="settings-block me-list-block">
         <button className="setting-row" type="button" onClick={onOpenFavorites}>
-          <WeIcon name="favorite" tone="orange" />
+          <WeIcon name="profile-favorite" />
           收藏
           <WeIcon name="arrow" size={12} className="native-chevron" />
         </button>
-        <button className="setting-row">
+        <button className="setting-row" type="button" onClick={onOpenMoments}>
           <WeIcon name="moments" tone="blue" />
           朋友圈
           <WeIcon name="arrow" size={12} className="native-chevron" />
         </button>
         <button className="setting-row">
-          <WeIcon name="card" tone="green" />
+          <WeIcon name="profile-card" />
           卡包
           <WeIcon name="arrow" size={12} className="native-chevron" />
         </button>
         <button className="setting-row">
-          <WeIcon name="sticker" tone="yellow" />
+          <WeIcon name="profile-sticker" tone="yellow" />
           表情
           <WeIcon name="arrow" size={12} className="native-chevron" />
         </button>
@@ -2002,7 +1940,7 @@ function MeTab({
           className="setting-row"
           onClick={onOpenSettings}
         >
-          <WeIcon name="settings" tone="green" />
+          <WeIcon name="profile-setting" tone="green" />
           设置
           <WeIcon name="arrow" size={12} className="native-chevron" />
         </button>
@@ -2446,12 +2384,10 @@ function ModelOptionDatalists() {
 
 function ChatBackgroundEditor({
   conversation,
-  imageSettings,
   onClose,
   onSave
 }: {
   conversation: Conversation;
-  imageSettings: Pick<AppState["settings"], "apiKey" | "apiBaseUrl" | "apiImageModel" | "apiImageSize">;
   onClose: () => void;
   onSave: (conversationId: string, chatBackgroundUrl: string) => void;
 }) {
@@ -2472,32 +2408,102 @@ function ChatBackgroundEditor({
   };
 
   return (
-    <div className="modal-backdrop">
-      <div className="modal-panel avatar-panel">
-        <button type="button" className="icon-button modal-close" onClick={onClose}>
-          <WeIcon name="close" size={18} />
+    <section className="profile-page local-image-page">
+      <header className="chat-header profile-header">
+        <button type="button" className="icon-button" onClick={onClose} title="返回">
+          <WeIcon name="back" size={24} />
         </button>
-        <h2>设置聊天背景</h2>
-        <div className="chat-background-preview">
+        <div className="chat-title">设置聊天背景</div>
+        <span />
+      </header>
+      <div className="local-image-body">
+        <div className="local-image-preview chat-background-preview">
           {previewUrl ? <img src={previewUrl} alt="" /> : <span>默认背景</span>}
         </div>
-        <label className="file-row">
-          <WeIcon name="upload" size={18} />
-          从手机相册选择
+        <label className="local-image-row">
+          <span>从手机相册选择</span>
+          <WeIcon name="arrow" size={12} className="native-chevron" />
           <input type="file" accept="image/*" onChange={handleFile} />
         </label>
-        <ImageSearchPanel
-          initialQuery={`${conversation.title} 聊天背景 壁纸`}
-          imageSettings={imageSettings}
-          onPick={(asset) => save(asset.url)}
-        />
         {previewUrl && (
-          <button type="button" className="secondary-button" onClick={() => save("")}>
+          <button type="button" className="local-image-reset" onClick={() => save("")}>
             使用默认背景
           </button>
         )}
       </div>
-    </div>
+    </section>
+  );
+}
+
+function ChatInfoPage({
+  conversation,
+  members,
+  onBack,
+  onOpenProfile,
+  onStartGroup,
+  onTogglePinned,
+  onToggleMuted,
+  onEditBackground,
+  onClear
+}: {
+  conversation: Conversation;
+  members: Character[];
+  onBack: () => void;
+  onOpenProfile: (characterId: string) => void;
+  onStartGroup: () => void;
+  onTogglePinned: () => void;
+  onToggleMuted: () => void;
+  onEditBackground: () => void;
+  onClear: () => void;
+}) {
+  return (
+    <section className="profile-page chat-info-page">
+      <header className="chat-header profile-header">
+        <button type="button" className="icon-button" onClick={onBack} title="返回">
+          <WeIcon name="back" size={24} />
+        </button>
+        <div className="chat-title">聊天信息{members.length > 1 ? `(${members.length})` : ""}</div>
+        <span />
+      </header>
+      <div className="chat-info-scroll">
+        <div className="chat-info-members">
+          {members.map((member) => (
+            <button type="button" key={member.id} onClick={() => onOpenProfile(member.id)}>
+              <Avatar character={member} size="md" />
+              <span>{member.remarkName}</span>
+            </button>
+          ))}
+          <button type="button" onClick={onStartGroup}>
+            <span className="chat-info-add-member"><WeIcon name="add" size={25} /></span>
+            <span>添加</span>
+          </button>
+        </div>
+
+        <div className="native-settings-group">
+          <button className="native-settings-row" type="button" onClick={onTogglePinned}>
+            <span>置顶聊天</span>
+            <span className={`native-switch ${conversation.pinned ? "active" : ""}`} aria-hidden="true"><i /></span>
+          </button>
+          <button className="native-settings-row" type="button" onClick={onToggleMuted}>
+            <span>消息免打扰</span>
+            <span className={`native-switch ${conversation.muted ? "active" : ""}`} aria-hidden="true"><i /></span>
+          </button>
+        </div>
+
+        <div className="native-settings-group">
+          <button className="native-settings-row" type="button" onClick={onEditBackground}>
+            <span>设置当前聊天背景</span>
+            <WeIcon name="arrow" size={12} className="native-chevron" />
+          </button>
+        </div>
+
+        <div className="native-settings-group">
+          <button className="native-settings-row native-settings-danger" type="button" onClick={onClear}>
+            <span>清空聊天记录</span>
+          </button>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -2510,7 +2516,8 @@ function ChatView({
   onQueueReply,
   onOpenProfile,
   onOpenUserProfile,
-  onEditBackground
+  onEditBackground,
+  onStartGroup
 }: {
   state: AppState;
   conversation: Conversation;
@@ -2521,10 +2528,10 @@ function ChatView({
   onOpenProfile: (characterId: string) => void;
   onOpenUserProfile: () => void;
   onEditBackground: () => void;
+  onStartGroup: () => void;
 }) {
   const [text, setText] = useState("");
   const [showStickers, setShowStickers] = useState(false);
-  const [showImagePicker, setShowImagePicker] = useState(false);
   const [showMoreActions, setShowMoreActions] = useState(false);
   const [showRedPacketPanel, setShowRedPacketPanel] = useState(false);
   const [redPacketAmount, setRedPacketAmount] = useState("88");
@@ -2549,7 +2556,7 @@ function ChatView({
 
   useEffect(() => {
     scrollToBottom();
-  }, [conversation.id, messages.length, isThinking, showImagePicker, showStickers, showMoreActions, showRedPacketPanel]);
+  }, [conversation.id, messages.length, isThinking, showStickers, showMoreActions, showRedPacketPanel]);
 
   useEffect(() => {
     return () => {
@@ -2583,7 +2590,6 @@ function ChatView({
     };
     appendMessages([message]);
     setShowStickers(false);
-    setShowImagePicker(false);
     setShowMoreActions(false);
     setShowRedPacketPanel(false);
   };
@@ -2869,7 +2875,26 @@ function ChatView({
   const chatBackgroundStyle = chatBackgroundUrl
     ? { backgroundImage: `url("${chatBackgroundUrl.replace(/"/g, "%22")}")` }
     : undefined;
-  const drawerOpen = showStickers || showImagePicker || showMoreActions || showRedPacketPanel;
+  const drawerOpen = showStickers || showMoreActions || showRedPacketPanel;
+
+  if (showChatActions) {
+    return (
+      <ChatInfoPage
+        conversation={conversation}
+        members={members}
+        onBack={() => setShowChatActions(false)}
+        onOpenProfile={onOpenProfile}
+        onStartGroup={onStartGroup}
+        onTogglePinned={togglePinned}
+        onToggleMuted={toggleMuted}
+        onEditBackground={onEditBackground}
+        onClear={() => {
+          clearConversationMessages();
+          setShowChatActions(false);
+        }}
+      />
+    );
+  }
 
   return (
     <section className={`chat-view ${drawerOpen ? "has-open-drawer" : ""}`}>
@@ -2973,14 +2998,12 @@ function ChatView({
             setText(event.target.value);
             if (event.target.value.trim()) {
               setShowStickers(false);
-              setShowImagePicker(false);
               setShowMoreActions(false);
               setShowRedPacketPanel(false);
             }
           }}
           onFocus={() => {
             setShowStickers(false);
-            setShowImagePicker(false);
             setShowMoreActions(false);
             setShowRedPacketPanel(false);
             window.setTimeout(scrollToBottom, 260);
@@ -2993,7 +3016,6 @@ function ChatView({
           className="tool-button"
           onClick={() => {
             setShowStickers((value) => !value);
-            setShowImagePicker(false);
             setShowMoreActions(false);
             setShowRedPacketPanel(false);
           }}
@@ -3011,7 +3033,6 @@ function ChatView({
             className="tool-button plus-tool-button"
             onClick={() => {
               setShowMoreActions((value) => !value);
-              setShowImagePicker(false);
               setShowStickers(false);
               setShowRedPacketPanel(false);
             }}
@@ -3033,40 +3054,17 @@ function ChatView({
         </div>
       )}
 
-      {showImagePicker && (
-        <div className="chat-drawer image-drawer">
-          <label className="file-row compact">
-            <WeIcon name="upload" size={18} />
-            从手机相册选择
-            <input type="file" accept="image/*" onChange={handleChatImageFile} />
-          </label>
-          <ImageSearchPanel
-            initialQuery={imageQueryFromText(text, character)}
-            imageSettings={modelSettingsForCharacter(state.settings, character)}
-            onPick={(asset) => sendMediaMessage(asset, "image")}
-          />
-        </div>
-      )}
-
       {showMoreActions && (
         <div className="chat-drawer more-drawer">
-          <button
-            type="button"
-            onClick={() => {
-              setShowImagePicker(true);
-              setShowStickers(false);
-              setShowRedPacketPanel(false);
-              setShowMoreActions(false);
-            }}
-          >
+          <label className="more-drawer-item">
             <span><WeIcon name="album" size={24} /></span>
             <b>照片</b>
-          </button>
+            <input type="file" accept="image/*" onChange={handleChatImageFile} />
+          </label>
           <button
             type="button"
             onClick={() => {
               setShowRedPacketPanel(true);
-              setShowImagePicker(false);
               setShowStickers(false);
               setShowMoreActions(false);
             }}
@@ -3113,19 +3111,6 @@ function ChatView({
             塞钱进红包
           </button>
         </form>
-      )}
-      {showChatActions && (
-        <ActionSheet
-          title={conversation.title}
-          onClose={() => setShowChatActions(false)}
-          actions={[
-            { label: "查看资料", icon: <WeIcon name="profile" size={18} />, onClick: () => onOpenProfile(character.id) },
-            { label: conversation.pinned ? "取消置顶" : "置顶聊天", icon: <Pin size={18} />, onClick: togglePinned },
-            { label: conversation.muted ? "关闭免打扰" : "消息免打扰", icon: <WeIcon name="bell-off" size={18} />, onClick: toggleMuted },
-            { label: "设置聊天背景", icon: <WeIcon name="album" size={18} />, onClick: onEditBackground },
-            { label: "清空聊天记录", icon: <WeIcon name="delete" size={18} />, danger: true, onClick: clearConversationMessages }
-          ]}
-        />
       )}
       {activeMessage && (
         <ActionSheet
@@ -3181,7 +3166,7 @@ function BottomTabs({
       {tabs.map((tab) => (
         <button className={active === tab.key ? "active" : ""} key={tab.key} onClick={() => setActive(tab.key)}>
           <span className="bottom-tab-icon">
-            <WeIcon name={tab.icon} />
+            <WeIcon name={tab.icon} active={active === tab.key} />
             {tab.key === "moments" && hasUnreadMoments && (
               <span className="bottom-tab-unread-dot" aria-hidden="true" />
             )}
@@ -4389,6 +4374,7 @@ export default function App() {
           onOpenProfile={openCharacterProfile}
           onOpenUserProfile={openUserProfile}
           onEditBackground={() => setEditingBackgroundConversationId(activeConversation.id)}
+          onStartGroup={openGroupCreator}
         />
       ) : isUserProfileOpen ? (
         <UserProfilePage
@@ -4448,14 +4434,19 @@ export default function App() {
                       : "我"}
               </h1>
               <div className="header-actions">
-                {activeTab !== "me" && (
+                {(activeTab === "chats" || activeTab === "contacts") && (
                   <button className="icon-button" onClick={() => setIsSearchOpen(true)} title="搜索">
                     <WeIcon name="search" />
                   </button>
                 )}
-                {activeTab !== "me" && (
+                {activeTab === "chats" && (
                   <button className="icon-button" onClick={() => setIsMainActionsOpen(true)} title="更多功能">
-                    <WeIcon name="add" size={22} />
+                    <WeIcon name="add" size={24} className="main-header-add" />
+                  </button>
+                )}
+                {activeTab === "contacts" && (
+                  <button className="icon-button" onClick={() => setIsCharacterManagerOpen(true)} title="添加朋友">
+                    <WeIcon name="contact-add" size={24} className="contacts-header-add" />
                   </button>
                 )}
               </div>
@@ -4477,7 +4468,6 @@ export default function App() {
               <div className={`tab-slide ${activeTab === "moments" ? "active" : ""}`} aria-hidden={activeTab !== "moments"}>
                 <DiscoverTab
                   onOpenMoments={openMomentsPage}
-                  onOpenTool={setActiveTool}
                   hasUnreadMoments={hasUnreadMoments}
                   unreadMomentAuthor={unreadMomentAuthor}
                 />
@@ -4488,6 +4478,7 @@ export default function App() {
                   onOpenProfile={openUserProfile}
                   onOpenWallet={() => setIsWalletOpen(true)}
                   onOpenFavorites={openFavoritesPage}
+                  onOpenMoments={openMomentsPage}
                   onOpenSettings={() => setIsSettingsOpen(true)}
                 />
               </div>
@@ -4519,7 +4510,6 @@ export default function App() {
       {activeBackgroundConversation && (
         <ChatBackgroundEditor
           conversation={activeBackgroundConversation}
-          imageSettings={state.settings}
           onClose={() => setEditingBackgroundConversationId(null)}
           onSave={updateConversationBackground}
         />
@@ -4528,11 +4518,6 @@ export default function App() {
         <AvatarEditor
           title="设置头像"
           initialUrl={state.characters.find((character) => character.id === editingCharacterId)?.avatarUrl}
-          searchHint={state.characters.find((character) => character.id === editingCharacterId)?.remarkName || "头像"}
-          imageSettings={modelSettingsForCharacter(
-            state.settings,
-            state.characters.find((character) => character.id === editingCharacterId)
-          )}
           onClose={() => setEditingCharacterId(null)}
           onSave={(avatarUrl) => updateCharacterAvatar(editingCharacterId!, avatarUrl)}
         />
@@ -4541,8 +4526,6 @@ export default function App() {
         <AvatarEditor
           title="设置头像"
           initialUrl={state.user.avatarUrl}
-          searchHint={`${state.user.displayName} 头像`}
-          imageSettings={state.settings}
           onClose={() => setIsEditingUserAvatar(false)}
           onSave={updateUserAvatar}
         />
@@ -4551,9 +4534,7 @@ export default function App() {
         <AvatarEditor
           title="设置朋友圈背景"
           initialUrl={state.settings.momentsCoverUrl}
-          searchHint="朋友圈 封面 风景"
           filePrefix="moments-background"
-          imageSettings={state.settings}
           onClose={() => setIsEditingMomentsCover(false)}
           onSave={updateMomentsCover}
         />
@@ -4562,17 +4543,9 @@ export default function App() {
         <MainPlusMenu
           onClose={() => setIsMainActionsOpen(false)}
           actions={[
-            {
-              label: "新的聊天",
-              icon: "tab-chat",
-              onClick: () => {
-                triggerProactive();
-                navigateTab("chats");
-              }
-            },
-            { label: "发起群聊", icon: "group", tone: "blue", onClick: openGroupCreator },
-            { label: "朋友圈", icon: "moments", tone: "blue", onClick: openMomentsPage },
-            { label: "设置", icon: "settings", tone: "gray", onClick: () => setIsSettingsOpen(true) }
+            { label: "发起群聊", icon: "group", onClick: openGroupCreator },
+            { label: "添加朋友", icon: "contact-add", onClick: () => setIsCharacterManagerOpen(true) },
+            { label: "收付款", icon: "services", onClick: () => setIsWalletOpen(true) }
           ]}
         />
       )}

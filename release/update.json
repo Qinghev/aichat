@@ -1,9 +1,9 @@
 {
-    "versionCode":  26,
-    "versionName":  "3.5",
+    "versionCode":  27,
+    "versionName":  "3.6",
     "apkUrl":  "https://qinghev.github.io/aichat/AIChatSandbox-debug.apk",
-    "sha256":  "539D6F1EAF0862904AF20A981941AD0D10E364CE205F16071F4FB31A7A089C18",
-    "notes":  "聊天气泡按屏幕宽度扩展，长句减少过早换行；发现页朋友圈更新增加最新发布者头像缩略图并在头像右上叠加红点；朋友圈、视频号、直播、扫一扫、看一看、搜一搜和小程序改用微信同名原始图形与原生配色。",
+    "sha256":  "924B0002AD49BB4C0994E4F45D23159BE0910F170CD14976EA64654DCD61749D",
+    "notes":  "发现页去掉顶部空隙与非原生入口；底栏、通讯录和个人页替换微信同名图标并支持高亮态；通讯录按拼音字母分组；头像、朋友圈、发图和聊天背景仅从本地相册选择；聊天右上角三点改为原生式聊天信息页。",
     "mandatory":  false,
-    "createdAt":  "2026-07-21T12:26:42Z"
+    "createdAt":  "2026-07-21T13:20:03Z"
 }
