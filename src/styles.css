@@ -5272,3 +5272,668 @@ button:focus-visible {
 .native-settings-danger > span:first-child {
   flex: 0 0 auto;
 }
+
+/* Native surface pass: action bars, Moments composer, chat info and red packets. */
+.app-header {
+  height: calc(56px + env(safe-area-inset-top));
+  flex: 0 0 calc(56px + env(safe-area-inset-top));
+  padding: calc(env(safe-area-inset-top) + 8px) 8px 8px 16px;
+  border-bottom: 0;
+  background: #ededed;
+}
+
+.app-header .title-row {
+  height: 40px;
+  margin: 0;
+}
+
+.app-header .title-row h1 {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 28px;
+}
+
+.app-header .header-actions {
+  height: 40px;
+  align-items: center;
+  gap: 0;
+}
+
+.app-header .header-actions .icon-button,
+.chat-header .icon-button,
+.moments-nav .icon-button {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 0;
+}
+
+.app-header .header-actions .wechat-icon-asset,
+.chat-header .icon-button .wechat-icon-asset,
+.moments-nav .icon-button .wechat-icon-asset {
+  width: 24px;
+  height: 24px;
+}
+
+.app-header-me {
+  background: #fff;
+  border-bottom: 0;
+}
+
+.app-header-me .title-row {
+  visibility: hidden;
+}
+
+.chat-header {
+  min-height: calc(56px + env(safe-area-inset-top));
+  padding: calc(env(safe-area-inset-top) + 8px) 8px 8px;
+  grid-template-columns: 40px minmax(0, 1fr) 40px;
+  gap: 4px;
+  border-bottom: 0;
+  box-shadow: inset 0 -0.5px #d7d7d7;
+}
+
+.chat-header .chat-title {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.chat-row.pinned,
+.chat-row.pinned:active {
+  background: #f3f3f3;
+}
+
+.muted-unread-dot {
+  width: 8px;
+  height: 8px;
+  display: inline-block;
+  border-radius: 50%;
+  background: #b2b2b2;
+}
+
+.folded-chats-row {
+  min-height: 64px;
+}
+
+.folded-chats-icon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 48px;
+  border-radius: 5px;
+  background: #d9d9d9;
+  color: #fff;
+}
+
+.folded-chats-row .native-chevron {
+  margin-left: auto;
+  transition: transform 160ms ease;
+}
+
+.folded-chats-row .native-chevron.expanded {
+  transform: rotate(90deg);
+}
+
+.folded-conversation-list {
+  border-top: 8px solid #ededed;
+}
+
+.moment-compose-page {
+  position: fixed;
+  inset: 0;
+  z-index: 72;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+
+.moment-compose-header {
+  flex: 0 0 auto;
+  grid-template-columns: 64px minmax(0, 1fr) 64px;
+  background: #ededed;
+  box-shadow: none;
+}
+
+.moment-compose-cancel,
+.moment-publish-button {
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  font-size: 15px;
+}
+
+.moment-compose-cancel {
+  width: 48px;
+  justify-self: start;
+  background: transparent;
+  color: #111;
+}
+
+.moment-publish-button {
+  width: 54px;
+  justify-self: end;
+  background: #07c160;
+  color: #fff;
+}
+
+.moment-publish-button:disabled {
+  background: #a9e6c5;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.moment-compose-body {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  background: #fff;
+  -webkit-overflow-scrolling: touch;
+}
+
+.moment-compose-body > textarea {
+  width: calc(100% - 32px);
+  min-height: 120px;
+  display: block;
+  margin: 18px 16px 4px;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  resize: none;
+  background: transparent;
+  color: #111;
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.moment-compose-body > textarea::placeholder {
+  color: #b2b2b2;
+}
+
+.moment-compose-page .compose-media-grid {
+  width: calc(100% - 32px);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 8px 16px 28px;
+}
+
+.moment-compose-page .compose-media-grid > button,
+.moment-compose-page .compose-media-grid > label {
+  aspect-ratio: 1;
+  min-width: 0;
+  position: relative;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: #f4f4f4;
+}
+
+.moment-compose-page .compose-media-grid img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.compose-media-add {
+  display: grid;
+  place-items: center;
+  color: #7f7f7f;
+}
+
+.compose-media-add::before,
+.compose-media-add::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 34px;
+  height: 1px;
+  background: #b2b2b2;
+  transform: translate(-50%, -50%);
+}
+
+.compose-media-add::after {
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+.compose-media-add > .wechat-icon,
+.compose-media-add > .wechat-icon-asset {
+  display: none;
+}
+
+.compose-media-add input,
+.moment-cover-picker-body input {
+  display: none;
+}
+
+.compose-media-remove {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.62);
+  color: #fff;
+}
+
+.moment-compose-options {
+  border-top: 0.5px solid #ededed;
+}
+
+.moment-compose-options button {
+  width: 100%;
+  min-height: 56px;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto 18px;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  padding: 0 16px;
+  border: 0;
+  background: #fff;
+  color: #111;
+  text-align: left;
+  font-size: 16px;
+}
+
+.moment-compose-options button::after {
+  content: "";
+  position: absolute;
+  left: 52px;
+  right: 0;
+  bottom: 0;
+  height: 0.5px;
+  background: #ededed;
+}
+
+.moment-compose-options button:last-child::after {
+  display: none;
+}
+
+.moment-compose-options button > small {
+  color: #8a8a8a;
+  font-size: 14px;
+}
+
+.moment-cover-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 74;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  background: #000;
+  color: #fff;
+}
+
+.moment-cover-viewer-header {
+  min-height: calc(56px + env(safe-area-inset-top));
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 48px;
+  align-items: center;
+  padding: calc(env(safe-area-inset-top) + 8px) 8px 8px;
+  background: #111;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.moment-cover-viewer-header .icon-button {
+  color: #fff;
+}
+
+.moment-cover-viewer-image {
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.moment-cover-viewer-image img {
+  width: 100%;
+  max-height: 100%;
+  display: block;
+  object-fit: contain;
+}
+
+.moment-cover-change-button {
+  width: calc(100% - 32px);
+  min-height: 48px;
+  margin: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  border: 0;
+  border-radius: 4px;
+  background: #fff;
+  color: #111;
+  font-size: 16px;
+}
+
+.moment-cover-picker {
+  position: fixed;
+  inset: 0;
+  z-index: 78;
+}
+
+.moment-cover-picker-body {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  padding-top: 8px;
+  background: #ededed;
+}
+
+.moment-cover-picker-body label {
+  width: 100%;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  position: relative;
+  padding: 0 16px;
+  background: #fff;
+  color: #111;
+  font-size: 16px;
+}
+
+.moment-cover-picker-body label::after {
+  content: "";
+  position: absolute;
+  left: 16px;
+  right: 0;
+  bottom: 0;
+  height: 0.5px;
+  background: #e5e5e5;
+}
+
+.moment-cover-picker-body label > span:first-child {
+  flex: 1;
+}
+
+.moments-nav {
+  min-height: calc(56px + env(safe-area-inset-top));
+  grid-template-columns: 48px minmax(0, 1fr) 48px;
+  padding: calc(env(safe-area-inset-top) + 8px) 8px 8px;
+}
+
+.moments-nav.is-scrolled {
+  box-shadow: inset 0 -0.5px #d7d7d7;
+}
+
+.chat-info-members {
+  gap: 16px 8px;
+  padding: 20px 12px 18px;
+}
+
+.native-settings-row {
+  min-height: 56px;
+  padding: 0 16px;
+  font-size: 16px;
+}
+
+.native-settings-row::after {
+  left: 16px;
+  height: 0.5px;
+  transform: none;
+}
+
+.native-switch {
+  width: 48px;
+  height: 28px;
+  border-radius: 14px;
+}
+
+.native-switch i {
+  width: 24px;
+  height: 24px;
+}
+
+.native-switch.active i {
+  transform: translateX(20px);
+}
+
+.chat-history-search-body {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  background: #ededed;
+}
+
+.chat-history-search-input {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 10px;
+  padding: 0 10px;
+  border-radius: 4px;
+  background: #fff;
+  color: #8a8a8a;
+}
+
+.chat-history-search-input input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+}
+
+.chat-history-search-categories {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 18px 10px;
+  background: #fff;
+  color: #576b95;
+  text-align: center;
+  font-size: 14px;
+}
+
+.chat-history-results {
+  margin-top: 8px;
+  background: #fff;
+}
+
+.chat-history-results > div {
+  min-height: 64px;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-bottom: 0.5px solid #e5e5e5;
+}
+
+.chat-history-results p {
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.chat-history-results small,
+.chat-history-empty {
+  color: #8a8a8a;
+  font-size: 12px;
+}
+
+.red-packet-page {
+  position: fixed;
+  inset: 0;
+  z-index: 72;
+  display: flex;
+  flex-direction: column;
+  background: #f5f3f1;
+}
+
+.red-packet-header {
+  flex: 0 0 auto;
+  background: #ededed;
+}
+
+.red-packet-page-body {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 16px calc(24px + env(safe-area-inset-bottom));
+  background: #f5f3f1;
+  -webkit-overflow-scrolling: touch;
+}
+
+.red-packet-type-switch {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin: 0 0 14px;
+}
+
+.red-packet-type-switch button {
+  min-height: 32px;
+  padding: 0 2px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #8a8a8a;
+  font-size: 14px;
+}
+
+.red-packet-type-switch button.active {
+  border-bottom-color: #fa5151;
+  color: #fa5151;
+}
+
+.red-packet-native-field,
+.red-packet-cover-row {
+  width: 100%;
+  min-height: 56px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 4px;
+  background: #fff;
+  color: #111;
+  font-size: 16px;
+}
+
+.red-packet-native-field input {
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  text-align: right;
+  font-size: 17px;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.red-packet-native-field input::-webkit-inner-spin-button,
+.red-packet-native-field input::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.red-packet-native-field b {
+  font-weight: 400;
+}
+
+.red-packet-field-hint {
+  margin: 7px 4px 0;
+  color: #8a8a8a;
+  font-size: 12px;
+}
+
+.red-packet-blessing-field {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.red-packet-blessing-field input {
+  text-align: left;
+  font-size: 15px;
+}
+
+.red-packet-cover-row {
+  grid-template-columns: minmax(0, 1fr) 62px 18px;
+  min-height: 68px;
+  text-align: left;
+}
+
+.red-packet-cover-row > i {
+  width: 46px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  justify-self: end;
+  border-radius: 3px;
+  background: #e85b3f;
+  color: #f9dfaa;
+  font-style: normal;
+}
+
+.red-packet-cover-row > i b {
+  max-width: 34px;
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.red-packet-total {
+  min-height: 92px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
+  padding-bottom: 8px;
+  color: #111;
+  font-size: 38px;
+  font-weight: 500;
+}
+
+.red-packet-total span {
+  margin-bottom: 5px;
+  font-size: 22px;
+  font-weight: 400;
+}
+
+.red-packet-submit {
+  width: min(100%, 184px);
+  height: 48px;
+  display: block;
+  margin: 10px auto 0;
+  border: 0;
+  border-radius: 4px;
+  background: #e85b3f;
+  color: #fff;
+  font-size: 16px;
+}
+
+.red-packet-submit:disabled {
+  background: #e8aaa0;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.red-packet-balance {
+  margin: 12px 0 0;
+  color: #8a8a8a;
+  text-align: center;
+  font-size: 12px;
+}
+
+@media (max-width: 360px) {
+  .moment-compose-page .compose-media-grid {
+    gap: 6px;
+  }
+
+  .red-packet-page-body {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+}

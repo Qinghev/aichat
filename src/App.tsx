@@ -1,4 +1,3 @@
-import { Pin } from "lucide-react";
 import { App as CapacitorApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import { ChangeEvent, CSSProperties, FormEvent, ReactNode, TouchEvent, useEffect, useMemo, useRef, useState } from "react";
@@ -44,6 +43,7 @@ import type {
 } from "./types";
 
 const localProvider = new LocalPersonaProvider();
+const defaultMomentsCoverUrl = new URL("../assets/moments/street.jpg", import.meta.url).href;
 
 const tabOrder: TabKey[] = ["chats", "contacts", "moments", "me"];
 const textModelOptions = [
@@ -141,6 +141,7 @@ const uiIconAssets = {
   look: new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_discover_news.svg", import.meta.url).href,
   "search-grid": new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_discover_searchlogo.svg", import.meta.url).href,
   search: new URL("../assets/wechat-ui-icons/outlined/my_audit_search.svg", import.meta.url).href,
+  location: new URL("../assets/wechat-ui-icons/outlined/my_audit_location.svg", import.meta.url).href,
   shop: new URL("../assets/wechat-ui-icons/filled/my_audit_shop.svg", import.meta.url).href,
   game: new URL("../assets/wechat-ui-icons/weixin-homepage/my_audit_mini_game.png", import.meta.url).href,
   mini: new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_discover_miniprogram.svg", import.meta.url).href,
@@ -627,40 +628,68 @@ function ChatsTab({
   state: AppState;
   openConversation: (conversationId: string) => void;
 }) {
+  const [showFolded, setShowFolded] = useState(false);
   const sorted = [...state.conversations].sort((a, b) => {
     if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
     return new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime();
   });
+  const visibleConversations = sorted.filter((conversation) => !conversation.folded);
+  const foldedConversations = sorted.filter((conversation) => conversation.folded);
+
+  const renderConversation = (conversation: Conversation) => {
+    const lastMessage = [...state.messages]
+      .reverse()
+      .find((message) => message.conversationId === conversation.id && message.senderType !== "system");
+    return (
+      <button
+        className={`chat-row ${conversation.pinned ? "pinned" : ""}`}
+        key={conversation.id}
+        onClick={() => openConversation(conversation.id)}
+      >
+        <ConversationAvatar conversation={conversation} characters={state.characters} />
+        <div className="row-main">
+          <div className="row-title-line">
+            <span className="row-title">{conversation.title}</span>
+            <span className="row-time">{formatTime(conversation.lastMessageAt)}</span>
+          </div>
+          <div className="row-sub-line">
+            <span className="row-preview">{messagePreview(lastMessage)}</span>
+            <span className="row-icons">
+              {conversation.muted && <WeIcon name="bell-off" size={13} />}
+              {conversation.unreadCount > 0 && (
+                conversation.muted
+                  ? <span className="muted-unread-dot" aria-label={`${conversation.unreadCount}条未读消息`} />
+                  : <span className="unread-dot">{conversation.unreadCount}</span>
+              )}
+            </span>
+          </div>
+        </div>
+      </button>
+    );
+  };
+
   return (
     <section className="screen-body list-body">
       <div className="search-row">
         <WeIcon name="search" size={18} />
         <span>搜索</span>
       </div>
-      {sorted.map((conversation) => {
-        const lastMessage = [...state.messages]
-          .reverse()
-          .find((message) => message.conversationId === conversation.id && message.senderType !== "system");
-        return (
-          <button className="chat-row" key={conversation.id} onClick={() => openConversation(conversation.id)}>
-            <ConversationAvatar conversation={conversation} characters={state.characters} />
+      {visibleConversations.map(renderConversation)}
+      {foldedConversations.length > 0 && (
+        <>
+          <button className="chat-row folded-chats-row" type="button" onClick={() => setShowFolded((value) => !value)}>
+            <span className="folded-chats-icon"><WeIcon name="tab-chat-filled" size={23} /></span>
             <div className="row-main">
               <div className="row-title-line">
-                <span className="row-title">{conversation.title}</span>
-                <span className="row-time">{formatTime(conversation.lastMessageAt)}</span>
+                <span className="row-title">折叠的聊天</span>
+                <WeIcon name="arrow" size={12} className={`native-chevron ${showFolded ? "expanded" : ""}`} />
               </div>
-              <div className="row-sub-line">
-                <span className="row-preview">{messagePreview(lastMessage)}</span>
-                <span className="row-icons">
-                  {conversation.pinned && <Pin size={13} />}
-                  {conversation.muted && <WeIcon name="bell-off" size={13} />}
-                  {conversation.unreadCount > 0 && <span className="unread-dot">{conversation.unreadCount}</span>}
-                </span>
-              </div>
+              <div className="row-preview">{foldedConversations.length}个聊天</div>
             </div>
           </button>
-        );
-      })}
+          {showFolded && <div className="folded-conversation-list">{foldedConversations.map(renderConversation)}</div>}
+        </>
+      )}
     </section>
   );
 }
@@ -1025,14 +1054,20 @@ function CharacterManagerPage({
 }
 
 function MomentComposer({
+  characters,
   onClose,
   onPublish
 }: {
+  characters: Character[];
   onClose: () => void;
   onPublish: (content: string, media: MediaAsset[]) => void;
 }) {
   const [content, setContent] = useState("");
   const [media, setMedia] = useState<MediaAsset[]>([]);
+  const [location, setLocation] = useState("");
+  const [visibility, setVisibility] = useState("公开");
+  const [remindedCharacterIds, setRemindedCharacterIds] = useState<string[]>([]);
+  const [activeSheet, setActiveSheet] = useState<"location" | "remind" | "visibility" | null>(null);
 
   const handleFile = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []).slice(0, 9 - media.length);
@@ -1048,38 +1083,166 @@ function MomentComposer({
     onClose();
   };
 
+  const canPublish = Boolean(content.trim() || media.length > 0);
+  const reminderText = remindedCharacterIds.length > 0 ? `已选择${remindedCharacterIds.length}人` : "";
+
   return (
-    <div className="modal-backdrop">
-      <div className="modal-panel moment-compose-panel">
-        <button type="button" className="icon-button modal-close" onClick={onClose}>
-          <WeIcon name="close" size={18} />
-        </button>
-        <h2>发朋友圈</h2>
-        <textarea value={content} onChange={(event) => setContent(event.target.value)} placeholder="这一刻的想法..." />
-        {media.length > 0 && (
-          <div className="compose-media-grid">
-            {media.map((item) => (
-              <button
-                type="button"
-                key={item.id}
-                onClick={() => setMedia((prev) => prev.filter((mediaItem) => mediaItem.id !== item.id))}
-              >
-                <img src={item.url} alt="" />
-                <WeIcon name="close" size={15} />
-              </button>
-            ))}
-          </div>
-        )}
-        <label className="file-row">
-          <WeIcon name="upload" size={18} />
-          从手机相册选择
-          <input type="file" accept="image/*" multiple onChange={handleFile} />
-        </label>
-        <button className="primary-button" type="button" onClick={publish} disabled={!content.trim() && media.length === 0}>
-          发布
-        </button>
+    <section className="profile-page moment-compose-page">
+      <header className="chat-header moment-compose-header">
+        <button type="button" className="moment-compose-cancel" onClick={onClose}>取消</button>
+        <span />
+        <button type="button" className="moment-publish-button" onClick={publish} disabled={!canPublish}>发表</button>
+      </header>
+      <div className="moment-compose-body">
+        <textarea
+          autoFocus
+          value={content}
+          onChange={(event) => setContent(event.target.value)}
+          placeholder="这一刻的想法..."
+          maxLength={2000}
+        />
+        <div className="compose-media-grid">
+          {media.map((item) => (
+            <button
+              className="compose-media-tile"
+              type="button"
+              key={item.id}
+              onClick={() => setMedia((prev) => prev.filter((mediaItem) => mediaItem.id !== item.id))}
+              title="移除图片"
+            >
+              <img src={item.url} alt="" />
+              <span className="compose-media-remove"><WeIcon name="close" size={12} /></span>
+            </button>
+          ))}
+          {media.length < 9 && (
+            <label className="compose-media-add" title="从手机相册选择">
+              <WeIcon name="add" size={28} />
+              <input type="file" accept="image/*" multiple onChange={handleFile} />
+            </label>
+          )}
+        </div>
+        <div className="moment-compose-options">
+          <button type="button" onClick={() => setActiveSheet("location")}>
+            <WeIcon name="location" size={22} />
+            <span>所在位置</span>
+            {location && <small>{location}</small>}
+            <WeIcon name="arrow" size={12} className="native-chevron" />
+          </button>
+          <button type="button" onClick={() => setActiveSheet("remind")}>
+            <WeIcon name="contact-add" size={22} />
+            <span>提醒谁看</span>
+            {reminderText && <small>{reminderText}</small>}
+            <WeIcon name="arrow" size={12} className="native-chevron" />
+          </button>
+          <button type="button" onClick={() => setActiveSheet("visibility")}>
+            <WeIcon name="profile" size={22} />
+            <span>谁可以看</span>
+            <small>{visibility}</small>
+            <WeIcon name="arrow" size={12} className="native-chevron" />
+          </button>
+        </div>
       </div>
-    </div>
+      {activeSheet === "location" && (
+        <ActionSheet
+          title="所在位置"
+          onClose={() => setActiveSheet(null)}
+          actions={["不显示位置", "家", "公司", "附近"].map((label) => ({
+            label,
+            onClick: () => setLocation(label === "不显示位置" ? "" : label)
+          }))}
+        />
+      )}
+      {activeSheet === "visibility" && (
+        <ActionSheet
+          title="谁可以看"
+          onClose={() => setActiveSheet(null)}
+          actions={["公开", "私密", "部分可见", "不给谁看"].map((label) => ({
+            label,
+            onClick: () => setVisibility(label)
+          }))}
+        />
+      )}
+      {activeSheet === "remind" && (
+        <ActionSheet
+          title="提醒谁看"
+          onClose={() => setActiveSheet(null)}
+          actions={characters.map((character) => ({
+            label: `${remindedCharacterIds.includes(character.id) ? "✓ " : ""}${character.remarkName}`,
+            onClick: () => setRemindedCharacterIds((current) =>
+              current.includes(character.id)
+                ? current.filter((id) => id !== character.id)
+                : [...current, character.id]
+            )
+          }))}
+        />
+      )}
+    </section>
+  );
+}
+
+function MomentCoverViewer({
+  coverUrl,
+  onClose,
+  onChange
+}: {
+  coverUrl: string;
+  onClose: () => void;
+  onChange: () => void;
+}) {
+  return (
+    <section className="moment-cover-viewer">
+      <header className="moment-cover-viewer-header">
+        <button type="button" className="icon-button" onClick={onClose} title="返回">
+          <WeIcon name="back" size={24} />
+        </button>
+        <span>相册封面</span>
+        <span />
+      </header>
+      <div className="moment-cover-viewer-image">
+        <img src={coverUrl || defaultMomentsCoverUrl} alt="朋友圈相册封面" />
+      </div>
+      <button type="button" className="moment-cover-change-button" onClick={onChange}>更换相册封面</button>
+    </section>
+  );
+}
+
+function MomentCoverPicker({
+  onClose,
+  onSave
+}: {
+  onClose: () => void;
+  onSave: (coverUrl: string) => void;
+}) {
+  const handleFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const media = await fileToMediaAsset(file, "moments-background");
+    onSave(media.url);
+    event.target.value = "";
+  };
+
+  return (
+    <section className="profile-page moment-cover-picker">
+      <header className="chat-header profile-header">
+        <button type="button" className="icon-button" onClick={onClose} title="返回">
+          <WeIcon name="back" size={24} />
+        </button>
+        <div className="chat-title">更换相册封面</div>
+        <span />
+      </header>
+      <div className="moment-cover-picker-body">
+        <label>
+          <span>从手机相册选择</span>
+          <WeIcon name="arrow" size={12} className="native-chevron" />
+          <input type="file" accept="image/*" onChange={handleFile} />
+        </label>
+        <label>
+          <span>拍一个</span>
+          <WeIcon name="arrow" size={12} className="native-chevron" />
+          <input type="file" accept="image/*" capture="environment" onChange={handleFile} />
+        </label>
+      </div>
+    </section>
   );
 }
 
@@ -1307,6 +1470,7 @@ function MomentsTab({
   generating: boolean;
 }) {
   const [isComposing, setIsComposing] = useState(false);
+  const [isCoverPreviewOpen, setIsCoverPreviewOpen] = useState(false);
   const [coverScrolled, setCoverScrolled] = useState(false);
   const posts = [...state.moments].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
@@ -1318,7 +1482,7 @@ function MomentsTab({
         </button>
         <div className="moments-nav-title">朋友圈</div>
         <button className="icon-button" onClick={() => setIsComposing(true)} onDoubleClick={onGenerate} disabled={generating}>
-          <WeIcon name="camera" />
+          <WeIcon name="camera" size={24} />
         </button>
       </header>
       <div
@@ -1329,9 +1493,9 @@ function MomentsTab({
           <button
             type="button"
             className={`moments-cover-photo ${state.settings.momentsCoverUrl ? "has-custom-cover" : ""}`}
-            onClick={onEditCover}
-            title="更换朋友圈背景"
-            style={state.settings.momentsCoverUrl ? { backgroundImage: `url("${state.settings.momentsCoverUrl.replace(/"/g, "%22")}")` } : undefined}
+            onClick={() => setIsCoverPreviewOpen(true)}
+            title="查看朋友圈背景"
+            style={{ backgroundImage: `url("${(state.settings.momentsCoverUrl || defaultMomentsCoverUrl).replace(/"/g, "%22")}")` }}
           />
           <div className="moments-owner">
             <span>{state.user.displayName}</span>
@@ -1354,8 +1518,16 @@ function MomentsTab({
         </div>
         {isComposing && (
           <MomentComposer
+            characters={state.characters}
             onClose={() => setIsComposing(false)}
             onPublish={onPublish}
+          />
+        )}
+        {isCoverPreviewOpen && (
+          <MomentCoverViewer
+            coverUrl={state.settings.momentsCoverUrl || defaultMomentsCoverUrl}
+            onClose={() => setIsCoverPreviewOpen(false)}
+            onChange={onEditCover}
           />
         )}
       </div>
@@ -2435,26 +2607,161 @@ function ChatBackgroundEditor({
   );
 }
 
+function ChatHistorySearchPage({
+  messages,
+  onBack
+}: {
+  messages: Message[];
+  onBack: () => void;
+}) {
+  const [query, setQuery] = useState("");
+  const keyword = query.trim().toLowerCase();
+  const results = messages
+    .filter((message) => message.senderType !== "system")
+    .filter((message) => !keyword || message.content.toLowerCase().includes(keyword))
+    .slice()
+    .reverse();
+
+  return (
+    <section className="profile-page chat-history-search-page">
+      <header className="chat-header profile-header">
+        <button type="button" className="icon-button" onClick={onBack} title="返回">
+          <WeIcon name="back" size={24} />
+        </button>
+        <div className="chat-title">查找聊天记录</div>
+        <span />
+      </header>
+      <div className="chat-history-search-body">
+        <div className="chat-history-search-input">
+          <WeIcon name="search" size={18} />
+          <input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索" />
+        </div>
+        <div className="chat-history-search-categories">
+          <span>日期</span><span>图片及视频</span><span>链接</span><span>文件</span>
+        </div>
+        {keyword && (
+          <div className="chat-history-results">
+            {results.length > 0 ? results.map((message) => (
+              <div key={message.id}>
+                <span>{message.senderType === "user" ? "我" : "对方"}</span>
+                <p>{messagePreview(message)}</p>
+                <small>{formatMomentTime(message.createdAt)}</small>
+              </div>
+            )) : <p className="chat-history-empty">无搜索结果</p>}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function RedPacketPage({
+  amount,
+  blessing,
+  balance,
+  isGroup,
+  onAmountChange,
+  onBlessingChange,
+  onBack,
+  onSubmit
+}: {
+  amount: string;
+  blessing: string;
+  balance: number;
+  isGroup: boolean;
+  onAmountChange: (value: string) => void;
+  onBlessingChange: (value: string) => void;
+  onBack: () => void;
+  onSubmit: (event: FormEvent) => void;
+}) {
+  const [packetType, setPacketType] = useState<"lucky" | "normal">("lucky");
+  const [packetCount, setPacketCount] = useState("1");
+  const numericAmount = Math.max(0, Number(amount) || 0);
+  const canSubmit = numericAmount > 0 && numericAmount <= balance;
+
+  return (
+    <form className="profile-page red-packet-page" onSubmit={onSubmit}>
+      <header className="chat-header red-packet-header">
+        <button type="button" className="icon-button" onClick={onBack} title="返回">
+          <WeIcon name="back" size={24} />
+        </button>
+        <div className="chat-title">发红包</div>
+        <span />
+      </header>
+      <div className="red-packet-page-body">
+        {isGroup && (
+          <div className="red-packet-type-switch">
+            <button type="button" className={packetType === "lucky" ? "active" : ""} onClick={() => setPacketType("lucky")}>拼手气红包</button>
+            <button type="button" className={packetType === "normal" ? "active" : ""} onClick={() => setPacketType("normal")}>普通红包</button>
+          </div>
+        )}
+        {isGroup && (
+          <label className="red-packet-native-field">
+            <span>红包个数</span>
+            <input type="number" min="1" max="100" inputMode="numeric" value={packetCount} onChange={(event) => setPacketCount(event.target.value)} />
+            <b>个</b>
+          </label>
+        )}
+        <label className="red-packet-native-field">
+          <span>{isGroup ? "总金额" : "金额"}</span>
+          <input
+            type="number"
+            min="0.01"
+            step="0.01"
+            max={balance}
+            inputMode="decimal"
+            value={amount}
+            onChange={(event) => onAmountChange(event.target.value)}
+            placeholder="0.00"
+            autoFocus
+          />
+          <b>元</b>
+        </label>
+        <p className="red-packet-field-hint">{isGroup ? "当前为群红包" : "对方可领取的红包"}</p>
+        <label className="red-packet-native-field red-packet-blessing-field">
+          <input value={blessing} maxLength={24} onChange={(event) => onBlessingChange(event.target.value)} placeholder="恭喜发财，大吉大利" />
+        </label>
+        <button type="button" className="red-packet-cover-row">
+          <span>红包封面</span>
+          <i aria-hidden="true"><b>恭喜发财</b></i>
+          <WeIcon name="arrow" size={12} className="native-chevron" />
+        </button>
+        <div className="red-packet-total"><span>¥</span>{numericAmount.toFixed(2)}</div>
+        <button className="red-packet-submit" type="submit" disabled={!canSubmit}>塞钱进红包</button>
+        <p className="red-packet-balance">余额 {formatMoney(balance)}</p>
+      </div>
+    </form>
+  );
+}
+
 function ChatInfoPage({
   conversation,
   members,
   onBack,
   onOpenProfile,
   onStartGroup,
+  onSearch,
   onTogglePinned,
   onToggleMuted,
+  onToggleFolded,
+  onToggleForceNotify,
   onEditBackground,
-  onClear
+  onClear,
+  onReport
 }: {
   conversation: Conversation;
   members: Character[];
   onBack: () => void;
   onOpenProfile: (characterId: string) => void;
   onStartGroup: () => void;
+  onSearch: () => void;
   onTogglePinned: () => void;
   onToggleMuted: () => void;
+  onToggleFolded: () => void;
+  onToggleForceNotify: () => void;
   onEditBackground: () => void;
   onClear: () => void;
+  onReport: () => void;
 }) {
   return (
     <section className="profile-page chat-info-page">
@@ -2480,13 +2787,28 @@ function ChatInfoPage({
         </div>
 
         <div className="native-settings-group">
+          <button className="native-settings-row" type="button" onClick={onSearch}>
+            <span>查找聊天记录</span>
+            <WeIcon name="arrow" size={12} className="native-chevron" />
+          </button>
+        </div>
+
+        <div className="native-settings-group">
+          <button className="native-settings-row" type="button" onClick={onToggleMuted}>
+            <span>消息免打扰</span>
+            <span className={`native-switch ${conversation.muted ? "active" : ""}`} aria-hidden="true"><i /></span>
+          </button>
+          <button className="native-settings-row" type="button" onClick={onToggleFolded}>
+            <span>折叠该聊天</span>
+            <span className={`native-switch ${conversation.folded ? "active" : ""}`} aria-hidden="true"><i /></span>
+          </button>
           <button className="native-settings-row" type="button" onClick={onTogglePinned}>
             <span>置顶聊天</span>
             <span className={`native-switch ${conversation.pinned ? "active" : ""}`} aria-hidden="true"><i /></span>
           </button>
-          <button className="native-settings-row" type="button" onClick={onToggleMuted}>
-            <span>消息免打扰</span>
-            <span className={`native-switch ${conversation.muted ? "active" : ""}`} aria-hidden="true"><i /></span>
+          <button className="native-settings-row" type="button" onClick={onToggleForceNotify}>
+            <span>提醒</span>
+            <span className={`native-switch ${conversation.forceNotify ? "active" : ""}`} aria-hidden="true"><i /></span>
           </button>
         </div>
 
@@ -2498,8 +2820,13 @@ function ChatInfoPage({
         </div>
 
         <div className="native-settings-group">
-          <button className="native-settings-row native-settings-danger" type="button" onClick={onClear}>
+          <button className="native-settings-row" type="button" onClick={onClear}>
             <span>清空聊天记录</span>
+            <WeIcon name="arrow" size={12} className="native-chevron" />
+          </button>
+          <button className="native-settings-row" type="button" onClick={onReport}>
+            <span>投诉</span>
+            <WeIcon name="arrow" size={12} className="native-chevron" />
           </button>
         </div>
       </div>
@@ -2534,9 +2861,12 @@ function ChatView({
   const [showStickers, setShowStickers] = useState(false);
   const [showMoreActions, setShowMoreActions] = useState(false);
   const [showRedPacketPanel, setShowRedPacketPanel] = useState(false);
-  const [redPacketAmount, setRedPacketAmount] = useState("88");
+  const [redPacketAmount, setRedPacketAmount] = useState("");
   const [redPacketBlessing, setRedPacketBlessing] = useState("恭喜发财，大吉大利");
   const [showChatActions, setShowChatActions] = useState(false);
+  const [showChatSearch, setShowChatSearch] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showReportSheet, setShowReportSheet] = useState(false);
   const [activeMessage, setActiveMessage] = useState<Message | null>(null);
   const [forwardingMessage, setForwardingMessage] = useState<Message | null>(null);
   const [toastText, setToastText] = useState("");
@@ -2596,7 +2926,7 @@ function ChatView({
 
   const sendRedPacket = (event?: FormEvent) => {
     event?.preventDefault();
-    const amount = Math.max(0, Math.round(Number(redPacketAmount)));
+    const amount = Math.max(0, Math.round(Number(redPacketAmount) * 100) / 100);
     if (!amount || amount > state.wallet.balance) return;
     const blessing = redPacketBlessing.trim() || "恭喜发财，大吉大利";
     const now = new Date().toISOString();
@@ -2631,7 +2961,7 @@ function ChatView({
     }));
     setShowRedPacketPanel(false);
     setShowMoreActions(false);
-    setRedPacketAmount("88");
+    setRedPacketAmount("");
     setRedPacketBlessing("恭喜发财，大吉大利");
     window.setTimeout(() => {
       const replyAt = new Date().toISOString();
@@ -2647,7 +2977,7 @@ function ChatView({
         senderType: "ai",
         senderCharacterId: character.id,
         contentType: "text",
-        content: thanks[Math.abs(character.id.length + amount) % thanks.length],
+        content: thanks[Math.floor(Math.abs(character.id.length + amount)) % thanks.length],
         aiGenerated: true,
         riskLevel: "L0",
         createdAt: replyAt,
@@ -2724,6 +3054,26 @@ function ChatView({
       ...prev,
       conversations: prev.conversations.map((item) =>
         item.id === conversation.id ? { ...item, muted: !item.muted } : item
+      )
+    }));
+  };
+
+  const toggleFolded = () => {
+    setState((prev) => ({
+      ...prev,
+      conversations: prev.conversations.map((item) =>
+        item.id === conversation.id
+          ? { ...item, folded: !item.folded, muted: item.folded ? item.muted : true, pinned: item.folded ? item.pinned : false }
+          : item
+      )
+    }));
+  };
+
+  const toggleForceNotify = () => {
+    setState((prev) => ({
+      ...prev,
+      conversations: prev.conversations.map((item) =>
+        item.id === conversation.id ? { ...item, forceNotify: !item.forceNotify } : item
       )
     }));
   };
@@ -2875,24 +3225,65 @@ function ChatView({
   const chatBackgroundStyle = chatBackgroundUrl
     ? { backgroundImage: `url("${chatBackgroundUrl.replace(/"/g, "%22")}")` }
     : undefined;
-  const drawerOpen = showStickers || showMoreActions || showRedPacketPanel;
+  const drawerOpen = showStickers || showMoreActions;
+
+  if (showRedPacketPanel) {
+    return (
+      <RedPacketPage
+        amount={redPacketAmount}
+        blessing={redPacketBlessing}
+        balance={state.wallet.balance}
+        isGroup={isGroupConversation}
+        onAmountChange={setRedPacketAmount}
+        onBlessingChange={setRedPacketBlessing}
+        onBack={() => setShowRedPacketPanel(false)}
+        onSubmit={sendRedPacket}
+      />
+    );
+  }
+
+  if (showChatSearch) {
+    return <ChatHistorySearchPage messages={messages} onBack={() => setShowChatSearch(false)} />;
+  }
 
   if (showChatActions) {
     return (
-      <ChatInfoPage
-        conversation={conversation}
-        members={members}
-        onBack={() => setShowChatActions(false)}
-        onOpenProfile={onOpenProfile}
-        onStartGroup={onStartGroup}
-        onTogglePinned={togglePinned}
-        onToggleMuted={toggleMuted}
-        onEditBackground={onEditBackground}
-        onClear={() => {
-          clearConversationMessages();
-          setShowChatActions(false);
-        }}
-      />
+      <>
+        <ChatInfoPage
+          conversation={conversation}
+          members={members}
+          onBack={() => setShowChatActions(false)}
+          onOpenProfile={onOpenProfile}
+          onStartGroup={onStartGroup}
+          onSearch={() => setShowChatSearch(true)}
+          onTogglePinned={togglePinned}
+          onToggleMuted={toggleMuted}
+          onToggleFolded={toggleFolded}
+          onToggleForceNotify={toggleForceNotify}
+          onEditBackground={onEditBackground}
+          onClear={() => setShowClearConfirm(true)}
+          onReport={() => setShowReportSheet(true)}
+        />
+        {showClearConfirm && (
+          <ActionSheet
+            title="清空后，聊天记录将无法恢复"
+            onClose={() => setShowClearConfirm(false)}
+            actions={[{ label: "清空聊天记录", danger: true, onClick: clearConversationMessages }]}
+          />
+        )}
+        {showReportSheet && (
+          <ActionSheet
+            title="投诉"
+            onClose={() => setShowReportSheet(false)}
+            actions={[
+              { label: "发布不适当内容", onClick: () => showToast("已记录") },
+              { label: "存在欺诈骗钱行为", onClick: () => showToast("已记录") },
+              { label: "其他", onClick: () => showToast("已记录") }
+            ]}
+          />
+        )}
+        {toastText && <div className="chat-toast">{toastText}</div>}
+      </>
     );
   }
 
@@ -3079,39 +3470,6 @@ function ChatView({
         </div>
       )}
 
-      {showRedPacketPanel && (
-        <form className="chat-drawer red-packet-panel" onSubmit={sendRedPacket}>
-          <div className="red-packet-panel-title">
-            <b>红包</b>
-            <span>余额 {formatMoney(state.wallet.balance)}</span>
-          </div>
-          <label className="red-packet-field">
-            <span>单个金额</span>
-            <div className="red-packet-money-input">
-              <input
-                type="number"
-                min="1"
-                max={state.wallet.balance}
-                value={redPacketAmount}
-                onChange={(event) => setRedPacketAmount(event.target.value)}
-              />
-              <b>元</b>
-            </div>
-          </label>
-          <label className="red-packet-field">
-            <span>留言</span>
-            <input
-              value={redPacketBlessing}
-              maxLength={24}
-              onChange={(event) => setRedPacketBlessing(event.target.value)}
-            />
-          </label>
-          <div className="red-packet-amount-preview">{formatMoney(Number(redPacketAmount) || 0)}</div>
-          <button type="submit" disabled={!Number(redPacketAmount) || Number(redPacketAmount) > state.wallet.balance}>
-            塞钱进红包
-          </button>
-        </form>
-      )}
       {activeMessage && (
         <ActionSheet
           title={shortMessagePreview(activeMessage)}
@@ -4422,21 +4780,17 @@ export default function App() {
         />
       ) : (
         <div className="main-stack" onTouchStart={handleMainTouchStart} onTouchEnd={handleMainTouchEnd}>
-          <header className="app-header">
+          <header className={`app-header app-header-${activeTab}`}>
             <div className="title-row">
-              <h1>
-                {activeTab === "chats"
-                  ? "微信"
-                  : activeTab === "contacts"
-                    ? "通讯录"
-                    : activeTab === "moments"
-                      ? "发现"
-                      : "我"}
-              </h1>
+              {activeTab !== "me" ? (
+                <h1>
+                  {activeTab === "chats" ? "微信" : activeTab === "contacts" ? "通讯录" : "发现"}
+                </h1>
+              ) : <span />}
               <div className="header-actions">
-                {(activeTab === "chats" || activeTab === "contacts") && (
+                {activeTab === "chats" && (
                   <button className="icon-button" onClick={() => setIsSearchOpen(true)} title="搜索">
-                    <WeIcon name="search" />
+                    <WeIcon name="search" size={24} />
                   </button>
                 )}
                 {activeTab === "chats" && (
@@ -4531,12 +4885,12 @@ export default function App() {
         />
       )}
       {isEditingMomentsCover && (
-        <AvatarEditor
-          title="设置朋友圈背景"
-          initialUrl={state.settings.momentsCoverUrl}
-          filePrefix="moments-background"
+        <MomentCoverPicker
           onClose={() => setIsEditingMomentsCover(false)}
-          onSave={updateMomentsCover}
+          onSave={(coverUrl) => {
+            updateMomentsCover(coverUrl);
+            setIsEditingMomentsCover(false);
+          }}
         />
       )}
       {isMainActionsOpen && (

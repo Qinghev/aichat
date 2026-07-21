@@ -98,6 +98,8 @@ export interface Conversation {
   title: string;
   pinned: boolean;
   muted: boolean;
+  folded?: boolean;
+  forceNotify?: boolean;
   unreadCount: number;
   lastMessageAt: string;
   chatBackgroundUrl?: string;

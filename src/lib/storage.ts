@@ -107,7 +107,9 @@ const migrateState = (state: AppState): AppState => {
       ...state.conversations.map((conversation) => ({
         ...conversation,
         memberCharacterIds: conversation.memberCharacterIds?.length ? conversation.memberCharacterIds : [conversation.characterId],
-        chatBackgroundUrl: conversation.chatBackgroundUrl || legacyChatBackgroundUrl || ""
+        chatBackgroundUrl: conversation.chatBackgroundUrl || legacyChatBackgroundUrl || "",
+        folded: Boolean(conversation.folded),
+        forceNotify: Boolean(conversation.forceNotify)
       })),
       ...missingSeedConversations
     ],
