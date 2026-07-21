@@ -129,15 +129,16 @@ const uiIconAssets = {
   group: new URL("../assets/wechat-ui-icons/filled/my_audit_contacts.svg", import.meta.url).href,
   official: new URL("../assets/wechat-ui-icons/weixin-homepage/my_audit_official_account.svg", import.meta.url).href,
   moments: new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_moments_filled.svg", import.meta.url).href,
+  "discover-moments": new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_discover_moments_color.svg", import.meta.url).href,
   channels: new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_channels_finder.svg", import.meta.url).href,
-  live: new URL("../assets/wechat-ui-icons/filled/my_audit_channels_tv.svg", import.meta.url).href,
-  scan: new URL("../assets/wechat-ui-icons/filled/my_audit_scan_qr_code.svg", import.meta.url).href,
-  look: new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_channels_friends_love.svg", import.meta.url).href,
-  "search-grid": new URL("../assets/wechat-ui-icons/filled/my_audit_search.svg", import.meta.url).href,
+  live: new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_discover_live.svg", import.meta.url).href,
+  scan: new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_discover_scan.svg", import.meta.url).href,
+  look: new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_discover_news.svg", import.meta.url).href,
+  "search-grid": new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_discover_searchlogo.svg", import.meta.url).href,
   search: new URL("../assets/wechat-ui-icons/outlined/my_audit_search.svg", import.meta.url).href,
   shop: new URL("../assets/wechat-ui-icons/filled/my_audit_shop.svg", import.meta.url).href,
   game: new URL("../assets/wechat-ui-icons/weixin-homepage/my_audit_mini_game.png", import.meta.url).href,
-  mini: new URL("../assets/wechat-ui-icons/weixin-homepage/my_audit_mini_program.png", import.meta.url).href,
+  mini: new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_discover_miniprogram.svg", import.meta.url).href,
   services: new URL("../assets/wechat-ui-icons/filled/my_audit_transfer.svg", import.meta.url).href,
   favorite: new URL("../assets/wechat-ui-icons/filled/my_audit_like.svg", import.meta.url).href,
   card: new URL("../assets/wechat-ui-icons/filled/my_audit_transfer.svg", import.meta.url).href,
@@ -314,13 +315,14 @@ function WeIcon({
 }) {
   const activeName = `${name}-filled` as keyof typeof uiIconAssets;
   const asset = uiIconAssets[active ? activeName : (name as keyof typeof uiIconAssets)] || uiIconAssets[name as keyof typeof uiIconAssets];
+  const isFullColorAsset = name === "discover-moments";
   const style = {
     ...(asset ? { "--we-icon-url": `url("${asset}")` } : {}),
     ...(size ? { width: size, height: size } : {})
   } as CSSProperties;
   return (
     <span
-      className={`wechat-icon ${asset ? "wechat-icon-asset" : `wechat-icon-${name}`} ${tone ? `wechat-icon-${tone}` : ""} ${className}`}
+      className={`wechat-icon ${asset ? "wechat-icon-asset" : `wechat-icon-${name}`} ${isFullColorAsset ? "wechat-icon-full-color" : ""} ${tone ? `wechat-icon-${tone}` : ""} ${className}`}
       style={style}
       aria-hidden="true"
     >
@@ -1142,11 +1144,13 @@ function MomentComposer({
 function DiscoverTab({
   onOpenMoments,
   onOpenTool,
-  hasUnreadMoments
+  hasUnreadMoments,
+  unreadMomentAuthor
 }: {
   onOpenMoments: () => void;
   onOpenTool: (tool: ToolKey) => void;
   hasUnreadMoments: boolean;
+  unreadMomentAuthor?: Character;
 }) {
   const rows: Array<{
     label: string;
@@ -1155,15 +1159,23 @@ function DiscoverTab({
     onClick?: () => void;
     gap?: boolean;
     unread?: boolean;
+    unreadAuthor?: Character;
   }> = [
-    { label: "朋友圈", icon: "moments", tone: "blue", onClick: onOpenMoments, unread: hasUnreadMoments },
+    {
+      label: "朋友圈",
+      icon: "discover-moments",
+      tone: "blue",
+      onClick: onOpenMoments,
+      unread: hasUnreadMoments,
+      unreadAuthor: unreadMomentAuthor
+    },
     { label: "视频号", icon: "channels", tone: "orange" },
-    { label: "直播", icon: "live", tone: "orange" },
-    { label: "扫一扫", icon: "scan", tone: "green", gap: true },
+    { label: "直播", icon: "live", tone: "red" },
+    { label: "扫一扫", icon: "scan", tone: "blue", gap: true },
     { label: "看一看", icon: "look", tone: "yellow" },
-    { label: "搜一搜", icon: "search-grid", tone: "teal" },
-    { label: "小程序", icon: "mini", tone: "green", gap: true },
-    { label: "深度整理", icon: "search-grid", tone: "teal", gap: true, onClick: () => onOpenTool("research") },
+    { label: "搜一搜", icon: "search-grid", tone: "red" },
+    { label: "小程序", icon: "mini", tone: "purple", gap: true },
+    { label: "深度整理", icon: "search-grid", tone: "red", gap: true, onClick: () => onOpenTool("research") },
     { label: "文档摘记", icon: "official", tone: "blue", onClick: () => onOpenTool("document") },
     { label: "聊天背景", icon: "camera", tone: "green", onClick: () => onOpenTool("background") }
   ];
@@ -1182,7 +1194,26 @@ function DiscoverTab({
           </span>
           <span className="discover-row-label">{row.label}</span>
           <span className="discover-row-tail">
-            {row.unread && <span className="discover-row-unread-dot" aria-hidden="true" />}
+            {row.unread && row.unreadAuthor ? (
+              <span className="discover-moment-update" aria-hidden="true">
+                <span
+                  className={`discover-moment-avatar ${row.unreadAuthor.avatarUrl ? "has-image" : ""}`}
+                  style={
+                    row.unreadAuthor.avatarUrl
+                      ? {
+                          backgroundColor: row.unreadAuthor.avatarColor,
+                          backgroundImage: `url(${row.unreadAuthor.avatarUrl})`
+                        }
+                      : { background: row.unreadAuthor.avatarColor }
+                  }
+                >
+                  {!row.unreadAuthor.avatarUrl && row.unreadAuthor.initials}
+                </span>
+                <span className="discover-row-unread-dot" />
+              </span>
+            ) : (
+              row.unread && <span className="discover-row-unread-dot" aria-hidden="true" />
+            )}
             <WeIcon name="arrow" size={12} className="native-chevron" />
           </span>
         </button>
@@ -4301,7 +4332,14 @@ export default function App() {
   };
 
   const activeTabIndex = Math.max(0, tabOrder.indexOf(activeTab));
-  const hasUnreadMoments = state.lifeEvents.some((event) => event.type === "moment" && !event.seen);
+  const unreadMomentEvents = state.lifeEvents
+    .filter((event) => event.type === "moment" && !event.seen)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const latestUnreadMomentEvent = unreadMomentEvents[0];
+  const hasUnreadMoments = unreadMomentEvents.length > 0;
+  const unreadMomentAuthor = state.characters.find(
+    (character) => character.id === latestUnreadMomentEvent?.characterIds[0]
+  );
 
   return (
     <div className="app-shell">
@@ -4441,6 +4479,7 @@ export default function App() {
                   onOpenMoments={openMomentsPage}
                   onOpenTool={setActiveTool}
                   hasUnreadMoments={hasUnreadMoments}
+                  unreadMomentAuthor={unreadMomentAuthor}
                 />
               </div>
               <div className={`tab-slide ${activeTab === "me" ? "active" : ""}`} aria-hidden={activeTab !== "me"}>

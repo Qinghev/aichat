@@ -1404,7 +1404,7 @@ body,
 }
 
 .bubble {
-  max-width: min(72%, 350px);
+  max-width: min(calc(100vw - 104px), 350px);
   padding: 8px 10px;
   border-radius: 4px;
   background: #fff;
@@ -2125,26 +2125,32 @@ body,
 }
 
 .discover-row .wechat-icon-blue {
-  color: #4a7fc1;
+  color: #1485ee;
 }
 
-.discover-row .wechat-icon-orange,
+.discover-row .wechat-icon-orange {
+  color: #fa9d3b;
+}
+
 .discover-row .wechat-icon-yellow {
-  color: #d69b32;
+  color: #ffbb00;
 }
 
 .discover-row .wechat-icon-green,
 .discover-row .wechat-icon-teal {
-  color: #07a35d;
+  color: #07c160;
+}
+
+.discover-row .wechat-icon-red {
+  color: #fa5151;
+}
+
+.discover-row .wechat-icon-purple {
+  color: #6467f0;
 }
 
 .discover-row .wechat-icon-asset > span {
   inset: 2px;
-}
-
-.discover-row .wechat-icon-red,
-.discover-row .wechat-icon-purple {
-  color: #576b95;
 }
 
 .comment-line {
@@ -3797,17 +3803,28 @@ button.profile-edit-row {
 }
 
 .discover-row .wechat-icon-blue {
-  color: #4a7fc1;
+  color: #1485ee;
 }
 
-.discover-row .wechat-icon-orange,
+.discover-row .wechat-icon-orange {
+  color: #fa9d3b;
+}
+
 .discover-row .wechat-icon-yellow {
-  color: #d69b32;
+  color: #ffbb00;
 }
 
 .discover-row .wechat-icon-green,
 .discover-row .wechat-icon-teal {
-  color: #07a35d;
+  color: #07c160;
+}
+
+.discover-row .wechat-icon-red {
+  color: #fa5151;
+}
+
+.discover-row .wechat-icon-purple {
+  color: #6467f0;
 }
 
 .discover-row .wechat-icon-asset > span {
@@ -4282,21 +4299,27 @@ button.profile-edit-row {
 }
 
 .discover-row {
-  grid-template-columns: 32px minmax(0, 1fr) 40px;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
 }
 
 .discover-row .wechat-icon,
 .discover-row .wechat-icon-asset {
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
 }
 
 .discover-row .wechat-icon-asset > span {
   inset: 0;
 }
 
+.discover-row .wechat-icon-full-color > span {
+  background: var(--we-icon-url) center / contain no-repeat;
+  -webkit-mask: none;
+  mask: none;
+}
+
 .discover-row-tail {
-  width: 40px;
+  min-width: 18px;
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
@@ -4315,6 +4338,37 @@ button.profile-edit-row {
   flex: 0 0 auto;
   border-radius: 50%;
   background: #fa5151;
+}
+
+.discover-moment-update {
+  width: 36px;
+  height: 36px;
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.discover-moment-avatar {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 3px;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.discover-moment-update .discover-row-unread-dot {
+  position: absolute;
+  top: -2px;
+  right: 0;
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid #fff;
 }
 
 .me-list-block .setting-row .wechat-icon,

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(3 3)" fill="#000" fill-rule="nonzero">
+    <path d="M9 18a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-1.35a7.65 7.65 0 1 1 0-15.3 7.65 7.65 0 0 1 0 15.3Z"/>
+    <circle opacity=".198149182" cx="9" cy="9" r="5"/>
+  </g>
+</svg>
