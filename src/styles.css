@@ -1722,27 +1722,56 @@ body,
 }
 
 .me-profile-row {
-  min-height: 136px;
-  margin: 0 0 8px;
-  padding: 28px 18px 20px;
+  height: 162px;
+  min-height: 162px;
+  margin: 0;
+  gap: 0;
+  padding: 58px 0 40px 24px;
   background: #fff;
   cursor: pointer;
 }
 
+.me-profile-row .profile-avatar-button {
+  flex: 0 0 64px;
+  margin-right: 16px;
+}
+
 .me-profile-row .avatar-lg {
-  width: 66px;
-  height: 66px;
+  width: 64px;
+  height: 64px;
+}
+
+.me-profile-copy {
+  min-width: 0;
+  height: 64px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.me-profile-primary,
+.me-profile-secondary {
+  min-width: 0;
+  display: flex;
+  align-items: center;
 }
 
 .profile-name {
-  font-size: 21px;
+  min-width: 0;
+  flex: 1;
+  font-size: 22px;
   font-weight: 600;
+  line-height: 28px;
 }
 
 .profile-sub {
-  margin-top: 6px;
-  color: #777;
-  font-size: 13px;
+  min-width: 0;
+  flex: 1;
+  margin: 0;
+  color: rgba(0, 0, 0, 0.55);
+  font-size: 15px;
+  line-height: 20px;
 }
 
 .profile-qr-icon {
@@ -1752,6 +1781,20 @@ body,
 
 .profile-edit-icon {
   color: #b7b7b7;
+}
+
+.me-profile-row .profile-qr-icon {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  margin: 0 16px 0 8px;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.me-profile-row .profile-edit-icon {
+  flex: 0 0 auto;
+  margin: 0 16px 0 8px;
+  color: rgba(0, 0, 0, 0.3);
 }
 
 .me-list-block {
@@ -5275,26 +5318,26 @@ button:focus-visible {
 
 /* Native surface pass: action bars, Moments composer, chat info and red packets. */
 .app-header {
-  height: calc(56px + env(safe-area-inset-top));
-  flex: 0 0 calc(56px + env(safe-area-inset-top));
-  padding: calc(env(safe-area-inset-top) + 8px) 8px 8px 16px;
+  height: calc(48px + env(safe-area-inset-top));
+  flex: 0 0 calc(48px + env(safe-area-inset-top));
+  padding: env(safe-area-inset-top) 0 0 16px;
   border-bottom: 0;
   background: #ededed;
 }
 
 .app-header .title-row {
-  height: 40px;
+  height: 48px;
   margin: 0;
 }
 
 .app-header .title-row h1 {
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 600;
-  line-height: 28px;
+  line-height: 24px;
 }
 
 .app-header .header-actions {
-  height: 40px;
+  height: 48px;
   align-items: center;
   gap: 0;
 }
@@ -5302,8 +5345,8 @@ button:focus-visible {
 .app-header .header-actions .icon-button,
 .chat-header .icon-button,
 .moments-nav .icon-button {
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   padding: 0;
   border-radius: 0;
 }
@@ -5316,19 +5359,15 @@ button:focus-visible {
 }
 
 .app-header-me {
-  background: #fff;
-  border-bottom: 0;
-}
-
-.app-header-me .title-row {
-  visibility: hidden;
+  display: none;
 }
 
 .chat-header {
-  min-height: calc(56px + env(safe-area-inset-top));
-  padding: calc(env(safe-area-inset-top) + 8px) 8px 8px;
-  grid-template-columns: 40px minmax(0, 1fr) 40px;
-  gap: 4px;
+  height: calc(48px + env(safe-area-inset-top));
+  min-height: calc(48px + env(safe-area-inset-top));
+  padding: env(safe-area-inset-top) 0 0;
+  grid-template-columns: 48px minmax(0, 1fr) 48px;
+  gap: 0;
   border-bottom: 0;
   box-shadow: inset 0 -0.5px #d7d7d7;
 }
@@ -5392,6 +5431,7 @@ button:focus-visible {
 .moment-compose-header {
   flex: 0 0 auto;
   grid-template-columns: 64px minmax(0, 1fr) 64px;
+  padding: calc(env(safe-area-inset-top) + 8px) 8px 8px;
   background: #ededed;
   box-shadow: none;
 }
@@ -5654,9 +5694,9 @@ button:focus-visible {
 }
 
 .moments-nav {
-  min-height: calc(56px + env(safe-area-inset-top));
+  min-height: calc(48px + env(safe-area-inset-top));
   grid-template-columns: 48px minmax(0, 1fr) 48px;
-  padding: calc(env(safe-area-inset-top) + 8px) 8px 8px;
+  padding: env(safe-area-inset-top) 0 0;
 }
 
 .moments-nav.is-scrolled {

@@ -1,9 +1,9 @@
 {
-    "versionCode":  29,
-    "versionName":  "3.8",
+    "versionCode":  30,
+    "versionName":  "3.9",
     "apkUrl":  "https://qinghev.github.io/aichat/AIChatSandbox-debug.apk",
-    "sha256":  "735143B599F0B37EA08D2346ABE67D76A7AE194AA3D0930290B1208DEF6EB8D2",
-    "notes":  "重做朋友圈发布与封面更换、原生红包页、聊天置顶和折叠，并统一顶部栏与图标细节。",
+    "sha256":  "01442CE0B7C1F7A322102077187A60ED2E4035F4B8CAE34CD2951223DF3EF689",
+    "notes":  "按微信 8.0.76 安装包校准顶部布局：移除我页多余导航空白，精确还原 162dp 个人信息区，并统一主页面、聊天及朋友圈的 48dp 顶栏。",
     "mandatory":  false,
-    "createdAt":  "2026-07-21T14:28:31Z"
+    "createdAt":  "2026-07-22T02:14:58Z"
 }

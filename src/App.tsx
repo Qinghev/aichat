@@ -2068,12 +2068,16 @@ function MeTab({
         <span className="profile-avatar-button">
           <UserAvatar user={state.user} size="lg" />
         </span>
-        <div>
-          <div className="profile-name">{state.user.displayName}</div>
-          <div className="profile-sub">微信号：qinghe</div>
+        <div className="me-profile-copy">
+          <div className="me-profile-primary">
+            <div className="profile-name">{state.user.displayName}</div>
+            <WeIcon name="qr-code" className="profile-qr-icon" size={22} />
+          </div>
+          <div className="me-profile-secondary">
+            <div className="profile-sub">微信号：qinghe</div>
+            <WeIcon name="arrow" className="profile-edit-icon native-chevron" size={12} />
+          </div>
         </div>
-        <WeIcon name="qr-code" className="profile-qr-icon" size={20} />
-        <WeIcon name="arrow" className="profile-edit-icon native-chevron" size={12} />
       </button>
 
       <div className="settings-block me-list-block">
@@ -4780,32 +4784,32 @@ export default function App() {
         />
       ) : (
         <div className="main-stack" onTouchStart={handleMainTouchStart} onTouchEnd={handleMainTouchEnd}>
-          <header className={`app-header app-header-${activeTab}`}>
-            <div className="title-row">
-              {activeTab !== "me" ? (
+          {activeTab !== "me" && (
+            <header className={`app-header app-header-${activeTab}`}>
+              <div className="title-row">
                 <h1>
                   {activeTab === "chats" ? "微信" : activeTab === "contacts" ? "通讯录" : "发现"}
                 </h1>
-              ) : <span />}
-              <div className="header-actions">
-                {activeTab === "chats" && (
-                  <button className="icon-button" onClick={() => setIsSearchOpen(true)} title="搜索">
-                    <WeIcon name="search" size={24} />
-                  </button>
-                )}
-                {activeTab === "chats" && (
-                  <button className="icon-button" onClick={() => setIsMainActionsOpen(true)} title="更多功能">
-                    <WeIcon name="add" size={24} className="main-header-add" />
-                  </button>
-                )}
-                {activeTab === "contacts" && (
-                  <button className="icon-button" onClick={() => setIsCharacterManagerOpen(true)} title="添加朋友">
-                    <WeIcon name="contact-add" size={24} className="contacts-header-add" />
-                  </button>
-                )}
+                <div className="header-actions">
+                  {activeTab === "chats" && (
+                    <button className="icon-button" onClick={() => setIsSearchOpen(true)} title="搜索">
+                      <WeIcon name="search" size={24} />
+                    </button>
+                  )}
+                  {activeTab === "chats" && (
+                    <button className="icon-button" onClick={() => setIsMainActionsOpen(true)} title="更多功能">
+                      <WeIcon name="add" size={24} className="main-header-add" />
+                    </button>
+                  )}
+                  {activeTab === "contacts" && (
+                    <button className="icon-button" onClick={() => setIsCharacterManagerOpen(true)} title="添加朋友">
+                      <WeIcon name="contact-add" size={24} className="contacts-header-add" />
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          </header>
+            </header>
+          )}
 
           <div className="tab-pager">
             <div className="tab-track" style={{ transform: `translate3d(-${activeTabIndex * 100}%, 0, 0)` }}>
