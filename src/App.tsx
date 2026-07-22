@@ -44,6 +44,9 @@ import type {
 
 const localProvider = new LocalPersonaProvider();
 const defaultMomentsCoverUrl = new URL("../assets/moments/street.jpg", import.meta.url).href;
+const redPacketCardIconUrl = new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_red_packet_card.webp", import.meta.url).href;
+const redPacketReceiptIconUrl = new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_red_packet_receipt.webp", import.meta.url).href;
+const redPacketOpenIconUrl = new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_red_packet_open.png", import.meta.url).href;
 
 const tabOrder: TabKey[] = ["chats", "contacts", "moments", "me"];
 const textModelOptions = [
@@ -106,12 +109,12 @@ type ToolKey = "research" | "document" | "background" | "role";
 const uiIconAssets = {
   "tab-chat": new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_tab_chats_outlined.svg", import.meta.url).href,
   "tab-chat-filled": new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_tab_chats_filled.svg", import.meta.url).href,
-  "tab-contacts": new URL("../assets/wechat-ui-icons/outlined/my_audit_contacts.svg", import.meta.url).href,
-  "tab-contacts-filled": new URL("../assets/wechat-ui-icons/filled/my_audit_contacts.svg", import.meta.url).href,
-  "tab-discover": new URL("../assets/wechat-ui-icons/outlined/my_audit_discover.svg", import.meta.url).href,
-  "tab-discover-filled": new URL("../assets/wechat-ui-icons/filled/my_audit_discover.svg", import.meta.url).href,
-  "tab-me": new URL("../assets/wechat-ui-icons/outlined/my_audit_me.svg", import.meta.url).href,
-  "tab-me-filled": new URL("../assets/wechat-ui-icons/filled/my_audit_me.svg", import.meta.url).href,
+  "tab-contacts": new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_tab_contacts_outlined.svg", import.meta.url).href,
+  "tab-contacts-filled": new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_tab_contacts_filled.svg", import.meta.url).href,
+  "tab-discover": new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_tab_discover_outlined.svg", import.meta.url).href,
+  "tab-discover-filled": new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_tab_discover_filled.svg", import.meta.url).href,
+  "tab-me": new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_tab_me_outlined.svg", import.meta.url).href,
+  "tab-me-filled": new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_tab_me_filled.svg", import.meta.url).href,
   add: new URL("../assets/wechat-ui-icons/outlined/my_audit_add.svg", import.meta.url).href,
   "plus-circle": new URL("../assets/wechat-ui-icons/outlined/my_audit_add_circle.svg", import.meta.url).href,
   arrow: new URL("../assets/wechat-ui-icons/outlined/my_audit_arrow.svg", import.meta.url).href,
@@ -169,6 +172,17 @@ const uiIconAssets = {
 } as const;
 
 const createId = (prefix: string) => `${prefix}_${crypto.randomUUID()}`;
+
+const redPacketReaction = (character: Character) => {
+  const reactions: Record<string, string> = {
+    c_linxia: "收到啦，谢谢你。",
+    c_zhouyu: "收到了，我记下了。",
+    c_atang: "那我就不客气啦，谢啦。",
+    c_muxi: "收到啦。你的心意，我会好好收着。",
+    c_shenyan: "已收到，谢谢。"
+  };
+  return reactions[character.id] || (character.personality.warmth >= 7 ? "收到啦，谢谢你。" : "收到了，谢谢。");
+};
 
 const messagePreview = (message?: Message) => {
   if (!message) return "还没有消息";
@@ -3026,6 +3040,7 @@ function ChatView({
   const [showReportSheet, setShowReportSheet] = useState(false);
   const [activeMessage, setActiveMessage] = useState<Message | null>(null);
   const [forwardingMessage, setForwardingMessage] = useState<Message | null>(null);
+  const [activeRedPacketId, setActiveRedPacketId] = useState<string | null>(null);
   const [toastText, setToastText] = useState("");
   const messageListRef = useRef<HTMLDivElement | null>(null);
   const longPressTimer = useRef<number | null>(null);
@@ -3033,6 +3048,12 @@ function ChatView({
   const character = members[0] || state.characters.find((item) => item.id === conversation.characterId)!;
   const isGroupConversation = members.length > 1;
   const messages = state.messages.filter((message) => message.conversationId === conversation.id);
+  const activeRedPacketMessage = activeRedPacketId
+    ? messages.find((message) => message.id === activeRedPacketId && message.redPacket?.status === "unopened")
+    : undefined;
+  const activeRedPacketSender = activeRedPacketMessage
+    ? state.characters.find((item) => item.id === activeRedPacketMessage.senderCharacterId) || character
+    : undefined;
 
   const scrollToBottom = () => {
     window.requestAnimationFrame(() => {
@@ -3044,6 +3065,25 @@ function ChatView({
   useEffect(() => {
     scrollToBottom();
   }, [conversation.id, messages.length, isThinking, showStickers, showMoreActions, showRedPacketPanel]);
+
+  useEffect(() => {
+    setState((prev) => {
+      const current = prev.conversations.find((item) => item.id === conversation.id);
+      const hasUnseenEvents = prev.lifeEvents.some(
+        (event) => event.conversationId === conversation.id && !event.seen
+      );
+      if ((!current || current.unreadCount === 0) && !hasUnseenEvents) return prev;
+      return {
+        ...prev,
+        conversations: prev.conversations.map((item) =>
+          item.id === conversation.id ? { ...item, unreadCount: 0 } : item
+        ),
+        lifeEvents: prev.lifeEvents.map((event) =>
+          event.conversationId === conversation.id ? { ...event, seen: true } : event
+        )
+      };
+    });
+  }, [conversation.id, conversation.unreadCount, messages.length, setState]);
 
   useEffect(() => {
     return () => {
@@ -3120,25 +3160,22 @@ function ChatView({
     setShowMoreActions(false);
     setRedPacketAmount("");
     setRedPacketBlessing("恭喜发财，大吉大利");
+    const receiver = isGroupConversation
+      ? members[Math.abs(Math.round(amount * 100)) % members.length] || character
+      : character;
     window.setTimeout(() => {
-      const replyAt = new Date().toISOString();
-      const thanks = [
-        "收到了，今天这份仪式感可以。",
-        "哈哈我收下了，先记你一笔好。",
-        "收到，谢谢老板。",
-        "这个红包我就不客气啦。"
-      ];
-      const reply: Message = {
-        id: createId("msg"),
+      const openedAt = new Date().toISOString();
+      const receipt: Message = {
+        id: createId("receipt"),
         conversationId: conversation.id,
-        senderType: "ai",
-        senderCharacterId: character.id,
-        contentType: "text",
-        content: thanks[Math.floor(Math.abs(character.id.length + amount)) % thanks.length],
-        aiGenerated: true,
+        senderType: "system",
+        senderCharacterId: receiver.id,
+        contentType: "system",
+        content: `${receiver.remarkName}领取了你的红包`,
+        aiGenerated: false,
         riskLevel: "L0",
-        createdAt: replyAt,
-        modelName: "red-packet-receipt"
+        createdAt: openedAt,
+        modelName: "red-packet-receipt-notice"
       };
       setState((prev) => ({
         ...prev,
@@ -3150,24 +3187,59 @@ function ChatView({
                   redPacket: {
                     ...item.redPacket,
                     status: "opened" as const,
-                    openedAt: replyAt
+                    openedAt
                   }
                 }
               : item
           ),
-          reply
+          receipt
         ],
         conversations: prev.conversations.map((item) =>
-          item.id === conversation.id ? { ...item, lastMessageAt: replyAt, unreadCount: 0 } : item
+          item.id === conversation.id ? { ...item, lastMessageAt: openedAt, unreadCount: 0 } : item
         )
       }));
+      window.setTimeout(() => {
+        const replyAt = new Date().toISOString();
+        const reply: Message = {
+          id: createId("msg"),
+          conversationId: conversation.id,
+          senderType: "ai",
+          senderCharacterId: receiver.id,
+          contentType: "text",
+          content: redPacketReaction(receiver),
+          aiGenerated: true,
+          riskLevel: "L0",
+          createdAt: replyAt,
+          modelName: "red-packet-reaction"
+        };
+        setState((prev) => ({
+          ...prev,
+          messages: [...prev.messages, reply],
+          conversations: prev.conversations.map((item) =>
+            item.id === conversation.id ? { ...item, lastMessageAt: replyAt, unreadCount: 0 } : item
+          )
+        }));
+      }, 620);
     }, 760);
   };
 
   const receiveRedPacket = (message: Message) => {
     if (message.senderType !== "ai" || message.contentType !== "red_packet" || message.redPacket?.status !== "unopened") return;
-    const amount = Math.max(0, Math.round(message.redPacket.amount || 0));
+    const amount = Math.max(0, Math.round((message.redPacket.amount || 0) * 100) / 100);
     const openedAt = new Date().toISOString();
+    const sender = state.characters.find((item) => item.id === message.senderCharacterId) || character;
+    const receipt: Message = {
+      id: createId("receipt"),
+      conversationId: conversation.id,
+      senderType: "system",
+      senderCharacterId: sender.id,
+      contentType: "system",
+      content: `你领取了${sender.remarkName}的红包`,
+      aiGenerated: false,
+      riskLevel: "L0",
+      createdAt: openedAt,
+      modelName: "red-packet-receipt-notice"
+    };
     setState((prev) => ({
       ...prev,
       wallet: {
@@ -3175,19 +3247,26 @@ function ChatView({
         balance: prev.wallet.balance + amount,
         totalReceived: prev.wallet.totalReceived + amount
       },
-      messages: prev.messages.map((item) =>
-        item.id === message.id
-          ? {
-              ...item,
-              redPacket: {
-                ...item.redPacket!,
-                status: "opened",
-                openedAt
+      messages: [
+        ...prev.messages.map((item) =>
+          item.id === message.id
+            ? {
+                ...item,
+                redPacket: {
+                  ...item.redPacket!,
+                  status: "opened" as const,
+                  openedAt
+                }
               }
-            }
-          : item
+            : item
+        ),
+        receipt
+      ],
+      conversations: prev.conversations.map((item) =>
+        item.id === conversation.id ? { ...item, lastMessageAt: openedAt, unreadCount: 0 } : item
       )
     }));
+    setActiveRedPacketId(null);
   };
 
   const handleChatImageFile = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -3468,11 +3547,23 @@ function ChatView({
         ref={messageListRef}
         style={chatBackgroundStyle}
       >
-        {messages.filter((message) => message.senderType !== "system").map((message) => {
+        {messages.map((message) => {
           const mine = message.senderType === "user";
-          const system = false;
+          const system = message.senderType === "system";
           const senderCharacter =
             state.characters.find((item) => item.id === message.senderCharacterId) || character;
+          if (system) {
+            return (
+              <div className="message-row system" key={message.id}>
+                <div className="system-message red-packet-receipt-message">
+                  {message.modelName === "red-packet-receipt-notice" && (
+                    <img src={redPacketReceiptIconUrl} alt="" />
+                  )}
+                  <span>{message.content}</span>
+                </div>
+              </div>
+            );
+          }
           return (
             <div className={`message-row ${mine ? "mine" : ""} ${system ? "system" : ""}`} key={message.id}>
               {!mine && !system && (
@@ -3502,24 +3593,24 @@ function ChatView({
                   ) : message.contentType === "red_packet" && message.redPacket ? (
                     <button
                       type="button"
-                      className="red-packet-card"
-                      onClick={() => receiveRedPacket(message)}
+                      className={`red-packet-card ${message.redPacket.status === "opened" ? "is-opened" : ""}`}
+                      onClick={() => setActiveRedPacketId(message.id)}
                       disabled={mine || message.redPacket.status !== "unopened"}
                     >
-                      <span className="red-packet-mark">¥</span>
-                      <span className="red-packet-main">
-                        <b>{message.redPacket.blessing || "恭喜发财，大吉大利"}</b>
-                        <small>
-                          {mine
-                            ? message.redPacket.status === "opened"
-                              ? `对方已领取 ${formatMoney(message.redPacket.amount)}`
-                              : `已发送 ${formatMoney(message.redPacket.amount)}`
-                            : message.redPacket.status === "opened"
-                              ? `已领取 ${formatMoney(message.redPacket.amount)}`
-                              : "微信红包"}
-                        </small>
+                      <span className="red-packet-card-content">
+                        <img className="red-packet-card-icon" src={redPacketCardIconUrl} alt="" />
+                        <span className="red-packet-main">
+                          <b>{message.redPacket.blessing || "恭喜发财，大吉大利"}</b>
+                          <small>
+                            {message.redPacket.status === "opened"
+                              ? "红包已领取"
+                              : mine
+                                ? "查看红包"
+                                : "领取红包"}
+                          </small>
+                        </span>
                       </span>
-                      {!mine && message.redPacket.status === "unopened" && <span className="red-packet-open">开</span>}
+                      <span className="red-packet-card-footer">微信红包</span>
                     </button>
                   ) : (
                     message.content
@@ -3617,13 +3708,48 @@ function ChatView({
               setShowMoreActions(false);
             }}
           >
-            <span className="red-action-icon">¥</span>
+            <span className="red-action-icon"><img src={redPacketCardIconUrl} alt="" /></span>
             <b>红包</b>
           </button>
           <button type="button" onClick={() => setShowStickers(true)}>
             <span><WeIcon name="emoji" size={24} /></span>
             <b>表情</b>
           </button>
+        </div>
+      )}
+
+      {activeRedPacketMessage && activeRedPacketSender && (
+        <div
+          className="red-packet-open-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-label="微信红包"
+          onClick={() => setActiveRedPacketId(null)}
+        >
+          <div className="red-packet-open-dialog" onClick={(event) => event.stopPropagation()}>
+            <button
+              className="red-packet-dialog-close"
+              type="button"
+              onClick={() => setActiveRedPacketId(null)}
+              title="关闭"
+            >
+              <WeIcon name="close" size={22} />
+            </button>
+            <div className="red-packet-dialog-avatar">
+              <Avatar character={activeRedPacketSender} size="sm" />
+            </div>
+            <div className="red-packet-dialog-sender">{activeRedPacketSender.remarkName}发出的红包</div>
+            <p>{activeRedPacketMessage.redPacket?.blessing || "恭喜发财，大吉大利"}</p>
+            <button
+              className="red-packet-dialog-open"
+              type="button"
+              onClick={() => receiveRedPacket(activeRedPacketMessage)}
+              title="拆红包"
+            >
+              <img src={redPacketOpenIconUrl} alt="开" />
+            </button>
+            <span className="red-packet-dialog-brand">微信红包</span>
+          </div>
         </div>
       )}
 
@@ -4808,7 +4934,11 @@ export default function App() {
         messages: [...prev.messages, message],
         conversations: prev.conversations.map((item) =>
           item.id === conversation.id
-            ? { ...item, unreadCount: item.unreadCount + 1, lastMessageAt: message.createdAt }
+            ? {
+                ...item,
+                unreadCount: activeConversationIdRef.current === conversation.id ? 0 : item.unreadCount + 1,
+                lastMessageAt: message.createdAt
+              }
             : item
         ),
         counters: {
