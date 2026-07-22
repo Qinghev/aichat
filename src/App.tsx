@@ -95,6 +95,12 @@ type PendingReply = {
   createdAt: string;
 };
 
+type MomentReplyTarget = {
+  characterId?: string;
+  userId?: string;
+  name: string;
+};
+
 type ToolKey = "research" | "document" | "background" | "role";
 
 const uiIconAssets = {
@@ -1457,6 +1463,8 @@ function MomentsTab({
   onPublish,
   onToggleLike,
   onComment,
+  onOpenCharacter,
+  onOpenUserProfile,
   onEditCover,
   generating
 }: {
@@ -1465,14 +1473,39 @@ function MomentsTab({
   onGenerate: () => void;
   onPublish: (content: string, media: MediaAsset[]) => void;
   onToggleLike: (postId: string) => void;
-  onComment: (postId: string) => void;
+  onComment: (postId: string, content: string, replyTo?: MomentReplyTarget) => void;
+  onOpenCharacter: (characterId: string) => void;
+  onOpenUserProfile: () => void;
   onEditCover: () => void;
   generating: boolean;
 }) {
   const [isComposing, setIsComposing] = useState(false);
   const [isCoverPreviewOpen, setIsCoverPreviewOpen] = useState(false);
   const [coverScrolled, setCoverScrolled] = useState(false);
+  const [commentingPostId, setCommentingPostId] = useState<string | null>(null);
+  const [commentTarget, setCommentTarget] = useState<MomentReplyTarget | undefined>();
+  const [commentDraft, setCommentDraft] = useState("");
   const posts = [...state.moments].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  const openCommentComposer = (postId: string, replyTo?: MomentReplyTarget) => {
+    setCommentingPostId(postId);
+    setCommentTarget(replyTo);
+    setCommentDraft("");
+  };
+
+  const closeCommentComposer = () => {
+    setCommentingPostId(null);
+    setCommentTarget(undefined);
+    setCommentDraft("");
+  };
+
+  const submitComment = (event: FormEvent) => {
+    event.preventDefault();
+    const content = commentDraft.trim();
+    if (!commentingPostId || !content) return;
+    onComment(commentingPostId, content, commentTarget);
+    closeCommentComposer();
+  };
 
   return (
     <section className="moments-page">
@@ -1481,7 +1514,15 @@ function MomentsTab({
           <WeIcon name="back" size={24} />
         </button>
         <div className="moments-nav-title">朋友圈</div>
-        <button className="icon-button" onClick={() => setIsComposing(true)} onDoubleClick={onGenerate} disabled={generating}>
+        <button
+          className="icon-button"
+          onClick={() => {
+            closeCommentComposer();
+            setIsComposing(true);
+          }}
+          onDoubleClick={onGenerate}
+          disabled={generating}
+        >
           <WeIcon name="camera" size={24} />
         </button>
       </header>
@@ -1499,7 +1540,7 @@ function MomentsTab({
           />
           <div className="moments-owner">
             <span>{state.user.displayName}</span>
-            <button className="cover-avatar-button" onClick={() => setIsComposing(true)} title="发朋友圈">
+            <button className="cover-avatar-button" onClick={onOpenUserProfile} title="查看个人信息">
               <UserAvatar user={state.user} size="lg" />
             </button>
           </div>
@@ -1512,10 +1553,34 @@ function MomentsTab({
               user={state.user}
               characters={state.characters}
               onToggleLike={onToggleLike}
-              onComment={onComment}
+              onStartComment={openCommentComposer}
+              onOpenCharacter={onOpenCharacter}
+              onOpenUserProfile={onOpenUserProfile}
             />
           ))}
         </div>
+        {commentingPostId && (
+          <div className="moment-comment-layer">
+            <button
+              className="moment-comment-backdrop"
+              type="button"
+              onClick={closeCommentComposer}
+              aria-label="取消评论"
+            />
+            <form className="moment-comment-composer" onSubmit={submitComment}>
+              <input
+                autoFocus
+                value={commentDraft}
+                onChange={(event) => setCommentDraft(event.target.value)}
+                placeholder={commentTarget ? `回复 ${commentTarget.name}` : "评论"}
+                maxLength={500}
+              />
+              <button type="submit" disabled={!commentDraft.trim()}>
+                发送
+              </button>
+            </form>
+          </div>
+        )}
         {isComposing && (
           <MomentComposer
             characters={state.characters}
@@ -1540,28 +1605,66 @@ function MomentCard({
   user,
   characters,
   onToggleLike,
-  onComment
+  onStartComment,
+  onOpenCharacter,
+  onOpenUserProfile
 }: {
   post: MomentPost;
   user: UserProfile;
   characters: Character[];
   onToggleLike: (postId: string) => void;
-  onComment: (postId: string) => void;
+  onStartComment: (postId: string, replyTo?: MomentReplyTarget) => void;
+  onOpenCharacter: (characterId: string) => void;
+  onOpenUserProfile: () => void;
 }) {
   const [showActions, setShowActions] = useState(false);
   const author = post.authorCharacterId ? characters.find((item) => item.id === post.authorCharacterId) : undefined;
   const isUserPost = post.authorUserId === user.id || !author;
   const likes = post.interactions.filter((item) => item.type === "like");
   const comments = post.interactions.filter((item) => item.type === "comment");
+  const userLiked = likes.some((item) => item.actorUserId === user.id);
+  const authorName = isUserPost ? user.displayName : author!.remarkName;
+  const authorTarget: MomentReplyTarget = isUserPost
+    ? { userId: user.id, name: user.displayName }
+    : { characterId: author!.id, name: author!.remarkName };
+
+  const interactionTarget = (actorCharacterId?: string, actorUserId?: string): MomentReplyTarget | undefined => {
+    if (actorUserId === user.id) return { userId: user.id, name: user.displayName };
+    const character = actorCharacterId ? characters.find((item) => item.id === actorCharacterId) : undefined;
+    return character ? { characterId: character.id, name: character.remarkName } : undefined;
+  };
+
+  const openIdentity = (target: MomentReplyTarget) => {
+    if (target.characterId) {
+      onOpenCharacter(target.characterId);
+      return;
+    }
+    if (target.userId === user.id) onOpenUserProfile();
+  };
+
+  const startReply = (target?: MomentReplyTarget) => {
+    onStartComment(post.id, target?.userId === user.id ? undefined : target);
+  };
+
+  const likeActors = likes
+    .map((like) => interactionTarget(like.actorCharacterId, like.actorUserId))
+    .filter((target): target is MomentReplyTarget => Boolean(target));
 
   return (
     <article className="moment-card">
-      {isUserPost ? <UserAvatar user={user} size="sm" /> : <Avatar character={author!} size="sm" />}
+      <button
+        className="moment-avatar-button"
+        type="button"
+        onClick={() => openIdentity(authorTarget)}
+        title={`查看${authorName}的资料`}
+      >
+        {isUserPost ? <UserAvatar user={user} size="sm" /> : <Avatar character={author!} size="sm" />}
+      </button>
       <div className="moment-main">
-        <div className="moment-author">
-          {isUserPost ? user.displayName : author!.remarkName}
+        <button className="moment-author" type="button" onClick={() => openIdentity(authorTarget)}>
+          {authorName}
           <AiBadge />
-        </div>
+        </button>
         <p>{post.content}</p>
         {post.media.length > 0 && (
           <div className={`media-grid media-count-${Math.min(post.media.length, 9)}`}>
@@ -1584,7 +1687,12 @@ function MomentCard({
         )}
         <div className="moment-actions">
           <span>{formatMomentTime(post.createdAt)}</span>
-          <button className="moment-more-button" onClick={() => setShowActions((value) => !value)}>
+          <button
+            className="moment-more-button"
+            type="button"
+            onClick={() => setShowActions((value) => !value)}
+            aria-label={`${authorName}朋友圈操作`}
+          >
             <WeIcon name="more" />
           </button>
           {showActions && (
@@ -1596,11 +1704,11 @@ function MomentCard({
                 }}
               >
                 <WeIcon name="like" />
-                赞
+                {userLiked ? "取消" : "赞"}
               </button>
               <button
                 onClick={() => {
-                  onComment(post.id);
+                  onStartComment(post.id);
                   setShowActions(false);
                 }}
               >
@@ -1611,21 +1719,66 @@ function MomentCard({
           )}
         </div>
         {(likes.length > 0 || comments.length > 0) && (
-          <div className="interaction-panel">
+          <div className={`interaction-panel ${likes.length > 0 && comments.length > 0 ? "has-likes-and-comments" : ""}`}>
             {likes.length > 0 && (
               <div className="likes-line">
                 <WeIcon name="like" />
-                {likes
-                  .map((like) => characters.find((item) => item.id === like.actorCharacterId)?.remarkName)
-                  .filter(Boolean)
-                  .join("、")}
+                <span className="moment-like-names">
+                  {likeActors.map((target, index) => (
+                    <span key={`${target.characterId || target.userId}-${index}`}>
+                      {index > 0 && "，"}
+                      <button type="button" onClick={() => openIdentity(target)}>
+                        {target.name}
+                      </button>
+                    </span>
+                  ))}
+                </span>
               </div>
             )}
             {comments.map((comment) => {
-              const actor = characters.find((item) => item.id === comment.actorCharacterId);
+              const actor = interactionTarget(comment.actorCharacterId, comment.actorUserId);
+              const replyTo = interactionTarget(comment.replyToCharacterId, comment.replyToUserId);
               return (
-                <div className="comment-line" key={comment.id}>
-                  <b>{actor?.remarkName}</b>：{comment.content}
+                <div
+                  className="comment-line"
+                  key={comment.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => startReply(actor)}
+                  onKeyDown={(event) => {
+                    if (event.target !== event.currentTarget) return;
+                    if (event.key === "Enter" || event.key === " ") startReply(actor);
+                  }}
+                  aria-label={actor ? `回复${actor.name}` : "回复评论"}
+                >
+                  {actor && (
+                    <button
+                      type="button"
+                      className="moment-interaction-name"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        openIdentity(actor);
+                      }}
+                    >
+                      {actor.name}
+                    </button>
+                  )}
+                  {replyTo && (
+                    <>
+                      <span> 回复 </span>
+                      <button
+                        type="button"
+                        className="moment-interaction-name"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openIdentity(replyTo);
+                        }}
+                      >
+                        {replyTo.name}
+                      </button>
+                    </>
+                  )}
+                  <span>：{comment.content}</span>
                 </div>
               );
             })}
@@ -4581,9 +4734,8 @@ export default function App() {
       ...prev,
       moments: prev.moments.map((post) => {
         if (post.id !== postId) return post;
-        const actor = prev.characters.find((character) => character.id !== post.authorCharacterId) ?? prev.characters[0];
         const existing = post.interactions.find(
-          (item) => item.type === "like" && item.actorCharacterId === actor.id
+          (item) => item.type === "like" && item.actorUserId === prev.user.id
         );
         return {
           ...post,
@@ -4593,9 +4745,9 @@ export default function App() {
                 ...post.interactions,
                 {
                   id: createId("interaction"),
-                  actorCharacterId: actor.id,
+                  actorUserId: prev.user.id,
                   type: "like",
-                  aiGenerated: true,
+                  aiGenerated: false,
                   createdAt: new Date().toISOString()
                 }
               ]
@@ -4604,22 +4756,25 @@ export default function App() {
     }));
   };
 
-  const addMomentComment = (postId: string) => {
+  const addMomentComment = (postId: string, content: string, replyTo?: MomentReplyTarget) => {
+    const normalizedContent = content.trim();
+    if (!normalizedContent) return;
     setState((prev) => ({
       ...prev,
       moments: prev.moments.map((post) => {
         if (post.id !== postId) return post;
-        const actor = prev.characters.find((character) => character.id !== post.authorCharacterId) ?? prev.characters[0];
         return {
           ...post,
           interactions: [
             ...post.interactions,
             {
               id: createId("interaction"),
-              actorCharacterId: actor.id,
+              actorUserId: prev.user.id,
+              replyToCharacterId: replyTo?.characterId,
+              replyToUserId: replyTo?.userId,
               type: "comment",
-              content: "这句留一下。",
-              aiGenerated: true,
+              content: normalizedContent,
+              aiGenerated: false,
               createdAt: new Date().toISOString()
             }
           ]
@@ -4771,6 +4926,8 @@ export default function App() {
           onPublish={publishMoment}
           onToggleLike={toggleMomentLike}
           onComment={addMomentComment}
+          onOpenCharacter={openCharacterProfile}
+          onOpenUserProfile={openUserProfile}
           onEditCover={() => setIsEditingMomentsCover(true)}
           generating={isGeneratingMoment}
         />

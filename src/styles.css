@@ -5977,3 +5977,162 @@ button:focus-visible {
     padding-right: 14px;
   }
 }
+
+/* Moments interaction details */
+.moments-stream .moment-avatar-button {
+  width: 42px;
+  height: 42px;
+  align-self: start;
+  display: block;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+}
+
+.moments-stream .moment-author {
+  width: fit-content;
+  min-height: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #576b95;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 20px;
+  text-align: left;
+}
+
+.moment-like-names button,
+.moment-interaction-name {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #576b95;
+  font: inherit;
+  font-weight: 500;
+  line-height: inherit;
+  text-align: left;
+}
+
+.interaction-panel {
+  padding: 5px 8px 6px;
+  line-height: 20px;
+}
+
+.likes-line {
+  min-height: 20px;
+  align-items: flex-start;
+  gap: 4px;
+  line-height: 20px;
+}
+
+.likes-line .wechat-icon-asset {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 15px;
+  margin-top: 2px;
+}
+
+.interaction-panel.has-likes-and-comments .likes-line {
+  margin-bottom: 3px;
+  padding-bottom: 3px;
+  border-bottom: 0.5px solid #dedee0;
+}
+
+.interaction-panel .comment-line,
+.interaction-panel .comment-line + .comment-line,
+.interaction-panel .likes-line + .comment-line {
+  display: block;
+  min-height: 20px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: #111;
+  line-height: 20px;
+  word-break: break-word;
+  cursor: pointer;
+}
+
+.interaction-panel .comment-line:active,
+.moment-like-names button:active,
+.moment-interaction-name:active,
+.moments-stream .moment-author:active {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.moment-comment-layer {
+  position: fixed;
+  inset: 0 auto 0 50%;
+  width: min(100vw, 520px);
+  transform: translateX(-50%);
+  z-index: 80;
+  pointer-events: none;
+}
+
+.moment-comment-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  pointer-events: auto;
+}
+
+.moment-comment-composer {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  min-height: calc(52px + env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 56px;
+  align-items: start;
+  gap: 8px;
+  padding: 7px 8px calc(7px + env(safe-area-inset-bottom));
+  border-top: 0.5px solid #d6d6d6;
+  background: #f7f7f7;
+  pointer-events: auto;
+}
+
+.moment-comment-composer input {
+  width: 100%;
+  height: 38px;
+  min-width: 0;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 4px;
+  outline: 0;
+  background: #fff;
+  color: #111;
+  font-size: 16px;
+}
+
+.moment-comment-composer input::placeholder {
+  color: #b2b2b2;
+}
+
+.moment-comment-composer button {
+  width: 56px;
+  height: 38px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: #07c160;
+  color: #fff;
+  font-size: 14px;
+}
+
+.moment-comment-composer button:disabled {
+  background: #e2e2e2;
+  color: #b2b2b2;
+}

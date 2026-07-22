@@ -127,7 +127,10 @@ export interface Message {
 
 export interface MomentInteraction {
   id: string;
-  actorCharacterId: string;
+  actorCharacterId?: string;
+  actorUserId?: string;
+  replyToCharacterId?: string;
+  replyToUserId?: string;
   type: "like" | "comment";
   content?: string;
   aiGenerated: boolean;
