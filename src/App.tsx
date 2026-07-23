@@ -2,7 +2,7 @@ import { App as CapacitorApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import { ChangeEvent, CSSProperties, FormEvent, ReactNode, TouchEvent, useEffect, useMemo, useRef, useState } from "react";
 import { seedCharacters } from "./data/seed";
-import { exportAppState, loadAppState, resetAppState, saveAppState } from "./lib/storage";
+import { exportAppState, hydrateAppState, loadAppState, resetAppState, saveAppState } from "./lib/storage";
 import { formatMomentTime, formatTime, todayKey } from "./lib/time";
 import {
   LocalPersonaProvider,
@@ -18,6 +18,7 @@ import {
   fileToMediaAsset,
   imageQueryFromText,
   momentImageQuery,
+  optimizeMediaAsset,
   searchImages,
   shouldAttachImageFromText,
   stickerPack
@@ -255,17 +256,16 @@ function GenderSelector({
   );
 }
 
-const fallbackMomentImages = [
-  new URL("../assets/moments/cafe.jpg", import.meta.url).href,
-  new URL("../assets/moments/outfit.jpg", import.meta.url).href,
-  new URL("../assets/moments/street.jpg", import.meta.url).href,
-  new URL("../assets/moments/table.jpg", import.meta.url).href,
-  new URL("../assets/moments/rain.jpg", import.meta.url).href
-];
-
-const fallbackMomentImage = (id: string) => {
-  const index = [...id].reduce((sum, char) => sum + char.charCodeAt(0), 0) % fallbackMomentImages.length;
-  return fallbackMomentImages[index];
+const momentGenerationPrompt = (post: MomentPost, character: Character) => {
+  const base = momentImageQuery(post.content, character);
+  const variation = post.id.replace(/[^a-z0-9]/gi, "").slice(-12);
+  return [
+    base,
+    `${character.roleType}的第一人称日常随手拍`,
+    "真实手机摄影，自然光，生活化构图，适合朋友圈，不要拼贴",
+    "画面中不要文字、标志、水印或界面元素",
+    `独立画面编号 ${variation}`
+  ].join("；");
 };
 
 const messageActionText = (message: Message) => {
@@ -1637,6 +1637,7 @@ function MomentCard({
   const likes = post.interactions.filter((item) => item.type === "like");
   const comments = post.interactions.filter((item) => item.type === "comment");
   const userLiked = likes.some((item) => item.actorUserId === user.id);
+  const visibleMedia = post.media.filter((media) => media.url.trim());
   const authorName = isUserPost ? user.displayName : author!.remarkName;
   const authorTarget: MomentReplyTarget = isUserPost
     ? { userId: user.id, name: user.displayName }
@@ -1680,22 +1681,10 @@ function MomentCard({
           <AiBadge />
         </button>
         <p>{post.content}</p>
-        {post.media.length > 0 && (
-          <div className={`media-grid media-count-${Math.min(post.media.length, 9)}`}>
-            {post.media.map((media) => (
-              media.url ? (
-                <img className="media-tile" key={media.id} src={media.url} alt="" />
-              ) : (
-                <div
-                  className="media-tile"
-                  key={media.id}
-                  style={{
-                    backgroundImage: `linear-gradient(180deg, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.16)), url(${fallbackMomentImage(media.id)})`,
-                    backgroundPosition: "center",
-                    backgroundSize: "cover"
-                  }}
-                />
-              )
+        {visibleMedia.length > 0 && (
+          <div className={`media-grid media-count-${Math.min(visibleMedia.length, 9)}`}>
+            {visibleMedia.map((media) => (
+              <img className="media-tile" key={media.id} src={media.url} alt="" />
             ))}
           </div>
         )}
@@ -3844,6 +3833,11 @@ export default function App() {
   const [pendingReplies, setPendingReplies] = useState<PendingReply[]>([]);
   const historyReady = useRef(false);
   const mainSwipeStart = useRef<{ x: number; y: number } | null>(null);
+  const stateRef = useRef(state);
+  const storageReady = useRef(false);
+  const momentsOpenRef = useRef(false);
+  const generatingMomentImages = useRef(new Set<string>());
+  const failedMomentImages = useRef(new Set<string>());
   const activeConversationIdRef = useRef<string | null>(null);
   const processingReplyIds = useRef(new Set<string>());
   const processingConversationIds = useRef(new Set<string>());
@@ -3853,8 +3847,49 @@ export default function App() {
   }, [activeConversationId]);
 
   useEffect(() => {
-    saveAppState(state);
+    momentsOpenRef.current = isMomentsOpen;
+  }, [isMomentsOpen]);
+
+  useEffect(() => {
+    stateRef.current = state;
+    if (storageReady.current) void saveAppState(state);
   }, [state]);
+
+  useEffect(() => {
+    let active = true;
+    void hydrateAppState(stateRef.current).then((hydrated) => {
+      if (!active) return;
+      const restored = {
+        ...hydrated,
+        user: {
+          ...hydrated.user,
+          lastActiveAt: new Date().toISOString()
+        }
+      };
+      storageReady.current = true;
+      stateRef.current = restored;
+      setState(restored);
+      void saveAppState(restored);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const persistCurrentState = () => {
+      void saveAppState(stateRef.current);
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") persistCurrentState();
+    };
+    window.addEventListener("pagehide", persistCurrentState);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.removeEventListener("pagehide", persistCurrentState);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, []);
 
   useEffect(() => {
     setActiveTab("chats");
@@ -3863,7 +3898,6 @@ export default function App() {
     setIsUserProfileOpen(false);
     setIsMomentsOpen(false);
     setIsFavoritesOpen(false);
-    setState((prev) => ({ ...prev, user: { ...prev.user, lastActiveAt: new Date().toISOString() } }));
     void checkForInternalUpdate();
   }, []);
 
@@ -3872,7 +3906,10 @@ export default function App() {
     const listener = CapacitorApp.addListener("appStateChange", ({ isActive }) => {
       setState((prev) => {
         const withActivity = { ...prev, user: { ...prev.user, lastActiveAt: new Date().toISOString() } };
-        return isActive ? advanceLocalLife(withActivity) : withActivity;
+        const next = isActive ? advanceLocalLife(withActivity) : withActivity;
+        stateRef.current = next;
+        if (!isActive) void saveAppState(next);
+        return next;
       });
     });
     return () => {
@@ -4091,10 +4128,35 @@ export default function App() {
         if (candidates.length === 0) return prev;
 
         const character = candidates[(prev.moments.length + new Date().getMinutes()) % candidates.length];
-        const post = generateMoment(prev, character);
+        const generatedPost = generateMoment(prev, character);
+        const post = {
+          ...generatedPost,
+          generationReason: "auto_local_moment",
+          media: generatedPost.media.length
+            ? generatedPost.media
+            : [
+                {
+                  id: `media_${crypto.randomUUID()}`,
+                  type: "image" as const,
+                  url: "",
+                  tone: character.avatarColor
+                }
+              ]
+        };
+        const momentEvent = {
+          id: `life_event_${post.id}`,
+          type: "moment" as const,
+          title: `${character.remarkName}更新了朋友圈`,
+          preview: post.content,
+          characterIds: [character.id],
+          momentId: post.id,
+          createdAt: post.createdAt,
+          seen: momentsOpenRef.current
+        };
         return {
           ...prev,
-          moments: [{ ...post, generationReason: "auto_local_moment" }, ...prev.moments]
+          moments: [post, ...prev.moments],
+          lifeEvents: [momentEvent, ...prev.lifeEvents].slice(0, 24)
         };
       });
     };
@@ -4106,6 +4168,69 @@ export default function App() {
       window.clearInterval(timer);
     };
   }, []);
+
+  useEffect(() => {
+    failedMomentImages.current.clear();
+  }, [
+    state.settings.apiKey,
+    state.settings.apiBaseUrl,
+    state.settings.apiImageModel,
+    state.settings.apiImageSize
+  ]);
+
+  useEffect(() => {
+    const post = state.moments.find(
+      (item) =>
+        item.aiGenerated &&
+        item.authorCharacterId &&
+        item.media.some((media) => !media.url.trim()) &&
+        !generatingMomentImages.current.has(item.id) &&
+        !failedMomentImages.current.has(item.id)
+    );
+    if (!post?.authorCharacterId) return;
+    const character = state.characters.find((item) => item.id === post.authorCharacterId && item.enabled);
+    if (!character) return;
+
+    generatingMomentImages.current.add(post.id);
+    const settings = modelSettingsForCharacter(state.settings, character);
+    const prompt = momentGenerationPrompt(post, character);
+    void generateImageAsset(settings, prompt)
+      .then(async (generated) => {
+        if (!generated) {
+          failedMomentImages.current.add(post.id);
+          return;
+        }
+        const cachedAsset = generated.url.startsWith("data:")
+          ? generated
+          : await cacheImageAsset(generated).catch(() => generated);
+        const asset = await optimizeMediaAsset(cachedAsset, "moments-generated");
+        setState((prev) => ({
+          ...prev,
+          moments: prev.moments.map((item) => {
+            if (item.id !== post.id) return item;
+            let inserted = false;
+            return {
+              ...item,
+              media: item.media.map((media) => {
+                if (inserted || media.url.trim()) return media;
+                inserted = true;
+                return {
+                  ...asset,
+                  id: media.id,
+                  title: media.title || asset.title
+                };
+              })
+            };
+          })
+        }));
+      })
+      .catch(() => {
+        failedMomentImages.current.add(post.id);
+      })
+      .finally(() => {
+        generatingMomentImages.current.delete(post.id);
+      });
+  }, [state.moments, state.characters, state.settings]);
 
   useEffect(() => {
     if (!historyReady.current) {
@@ -4843,11 +4968,19 @@ export default function App() {
     const available = state.characters.filter((character) => character.enabled && character.momentsPolicy.enabled);
     const character = available[state.moments.length % available.length] ?? state.characters[0];
     const post = generateMoment(state, character);
-    const imagePrompt = momentImageQuery(post.content, character);
+    const imagePrompt = momentGenerationPrompt(post, character);
     const characterSettings = modelSettingsForCharacter(state.settings, character);
     const generated = await generateImageAsset(characterSettings, imagePrompt).catch(() => null);
     const images = generated ? [] : await searchImages(imagePrompt, 8).catch(() => []);
-    const image = generated || (images[0] ? await cacheImageAsset(images[0]) : undefined);
+    const generatedImage = generated
+      ? await optimizeMediaAsset(
+          generated.url.startsWith("data:")
+            ? generated
+            : await cacheImageAsset(generated).catch(() => generated),
+          "moments-generated"
+        )
+      : undefined;
+    const image = generatedImage || (images[0] ? await cacheImageAsset(images[0]) : undefined);
     setState((prev) => ({
       ...prev,
       moments: [{ ...post, media: image ? [image] : post.media }, ...prev.moments]

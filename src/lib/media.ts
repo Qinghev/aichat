@@ -102,8 +102,7 @@ const canvasToDataUrl = (canvas: HTMLCanvasElement, quality: number) =>
     );
   });
 
-const optimizeImageFile = async (file: File, prefix: string) => {
-  const original = await readBlobAsDataUrl(file);
+const optimizeImageUrl = async (original: string, prefix: string) => {
   try {
     const image = await loadImage(original);
     const maxSide = prefix.includes("avatar") ? 720 : prefix.includes("background") ? 1600 : 1280;
@@ -122,11 +121,19 @@ const optimizeImageFile = async (file: File, prefix: string) => {
   }
 };
 
+const optimizeImageFile = async (file: File, prefix: string) =>
+  optimizeImageUrl(await readBlobAsDataUrl(file), prefix);
+
 export const fileToMediaAsset = async (file: File, prefix = "media"): Promise<MediaAsset> => ({
   id: `${prefix}_${crypto.randomUUID()}`,
   type: "image",
   url: await optimizeImageFile(file, prefix),
   title: file.name
+});
+
+export const optimizeMediaAsset = async (asset: MediaAsset, prefix = "generated"): Promise<MediaAsset> => ({
+  ...asset,
+  url: await optimizeImageUrl(asset.url, prefix)
 });
 
 type CommonsPage = {

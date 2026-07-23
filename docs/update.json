@@ -1,9 +1,9 @@
 {
-    "versionCode":  32,
-    "versionName":  "4.1",
+    "versionCode":  33,
+    "versionName":  "4.2",
     "apkUrl":  "https://qinghev.github.io/aichat/AIChatSandbox-debug.apk",
-    "sha256":  "D06BC25185E0FCA9163FF64A3B44415106DBB4569812E4710514AEBAEAC0851F",
-    "notes":  "修正未读红点清除，校准底栏图标，并完善微信原版红包领取与回复流程",
+    "sha256":  "B18C77343571E31C4119CE69F0151A93F6408ACDEB1DBC1984890BBFFA838B9A",
+    "notes":  "修复未读和朋友圈红点重启复现，增加大容量本地持久化，并让人物朋友圈调用已配置的图片模型生成独立配图",
     "mandatory":  false,
-    "createdAt":  "2026-07-22T04:43:03Z"
+    "createdAt":  "2026-07-23T03:09:02Z"
 }

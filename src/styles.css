@@ -1722,11 +1722,11 @@ body,
 }
 
 .me-profile-row {
-  height: 162px;
-  min-height: 162px;
+  height: calc(180px + env(safe-area-inset-top));
+  min-height: calc(180px + env(safe-area-inset-top));
   margin: 0;
   gap: 0;
-  padding: 58px 0 40px 24px;
+  padding: calc(76px + env(safe-area-inset-top)) 0 40px 24px;
   background: #fff;
   cursor: pointer;
 }
