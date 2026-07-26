@@ -1,0 +1,9 @@
+{
+  "versionCode": 34,
+  "versionName": "4.3",
+  "apkUrl": "https://qinghev.github.io/aichat/AIChatSandbox-debug.apk",
+  "sha256": "7B64AFE9F22D4E7F1E26D477465A3D1C66F5B319E7984D07A3FC418DE20E31CA",
+  "notes": "\u6062\u590d\u670b\u53cb\u5708\u56fe\u7247\u663e\u793a\u5e76\u589e\u52a0\u751f\u56fe\u5931\u8d25\u56de\u9000\uff0c\u4fee\u590d\u8d5e\u548c\u8bc4\u8bba\u83dc\u5355\u663e\u793a\u4e0d\u5168",
+  "mandatory": false,
+  "createdAt": "2026-07-26T02:46:37Z"
+}
