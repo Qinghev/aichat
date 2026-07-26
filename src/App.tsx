@@ -45,6 +45,13 @@ import type {
 
 const localProvider = new LocalPersonaProvider();
 const defaultMomentsCoverUrl = new URL("../assets/moments/street.jpg", import.meta.url).href;
+const fallbackMomentImageUrls = [
+  new URL("../assets/moments/cafe.jpg", import.meta.url).href,
+  new URL("../assets/moments/outfit.jpg", import.meta.url).href,
+  new URL("../assets/moments/street.jpg", import.meta.url).href,
+  new URL("../assets/moments/table.jpg", import.meta.url).href,
+  new URL("../assets/moments/rain.jpg", import.meta.url).href
+];
 const redPacketCardIconUrl = new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_red_packet_card.webp", import.meta.url).href;
 const redPacketReceiptIconUrl = new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_red_packet_receipt.webp", import.meta.url).href;
 const redPacketOpenIconUrl = new URL("../assets/wechat-ui-icons/weixin-apk/my_audit_red_packet_open.png", import.meta.url).href;
@@ -4179,6 +4186,7 @@ export default function App() {
   ]);
 
   useEffect(() => {
+    if (generatingMomentImages.current.size > 0) return;
     const post = state.moments.find(
       (item) =>
         item.aiGenerated &&
@@ -4190,45 +4198,77 @@ export default function App() {
     if (!post?.authorCharacterId) return;
     const character = state.characters.find((item) => item.id === post.authorCharacterId && item.enabled);
     if (!character) return;
+    const targetMedia = post.media.find((media) => !media.url.trim());
+    if (!targetMedia) return;
 
     generatingMomentImages.current.add(post.id);
     const settings = modelSettingsForCharacter(state.settings, character);
     const prompt = momentGenerationPrompt(post, character);
+    const imageQuery = momentImageQuery(post.content, character);
+    const imageSeed = Array.from(post.id).reduce(
+      (total, characterCode) => (total * 31 + characterCode.charCodeAt(0)) >>> 0,
+      0
+    );
+    const applyMomentImage = (asset: MediaAsset, replaceExisting: boolean) => {
+      setState((prev) => ({
+        ...prev,
+        moments: prev.moments.map((item) => {
+          if (item.id !== post.id) return item;
+          return {
+            ...item,
+            media: item.media.map((media) => {
+              if (media.id !== targetMedia.id || (!replaceExisting && media.url.trim())) return media;
+              return {
+                ...asset,
+                id: media.id,
+                title: media.title || asset.title
+              };
+            })
+          };
+        })
+      }));
+    };
+
+    applyMomentImage(
+      {
+        ...targetMedia,
+        type: "image",
+        url: fallbackMomentImageUrls[imageSeed % fallbackMomentImageUrls.length],
+        title: targetMedia.title || character.remarkName || character.displayName
+      },
+      false
+    );
+
+    const fallbackImage = searchImages(imageQuery, 8)
+      .then(async (images) => {
+        if (!images.length) return null;
+        const selected = images[imageSeed % images.length];
+        const cached = await cacheImageAsset(selected).catch(() => selected);
+        return optimizeMediaAsset(cached, "moments-fallback").catch(() => cached);
+      })
+      .catch(() => null);
+    let generatedApplied = false;
+
+    void fallbackImage.then((asset) => {
+      if (asset && !generatedApplied) applyMomentImage(asset, true);
+    });
+
     void generateImageAsset(settings, prompt)
       .then(async (generated) => {
-        if (!generated) {
-          failedMomentImages.current.add(post.id);
-          return;
-        }
+        if (!generated) return;
         const cachedAsset = generated.url.startsWith("data:")
           ? generated
           : await cacheImageAsset(generated).catch(() => generated);
         const asset = await optimizeMediaAsset(cachedAsset, "moments-generated");
-        setState((prev) => ({
-          ...prev,
-          moments: prev.moments.map((item) => {
-            if (item.id !== post.id) return item;
-            let inserted = false;
-            return {
-              ...item,
-              media: item.media.map((media) => {
-                if (inserted || media.url.trim()) return media;
-                inserted = true;
-                return {
-                  ...asset,
-                  id: media.id,
-                  title: media.title || asset.title
-                };
-              })
-            };
-          })
-        }));
+        generatedApplied = true;
+        applyMomentImage(asset, true);
       })
-      .catch(() => {
-        failedMomentImages.current.add(post.id);
-      })
-      .finally(() => {
+      .catch(() => undefined)
+      .finally(async () => {
+        const fallbackAsset = await fallbackImage;
+        if (!generatedApplied && !fallbackAsset) failedMomentImages.current.add(post.id);
         generatingMomentImages.current.delete(post.id);
+        setState((prev) => ({ ...prev, moments: [...prev.moments] }));
       });
   }, [state.moments, state.characters, state.settings]);
 
